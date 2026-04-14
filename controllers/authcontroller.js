@@ -48,14 +48,7 @@ const signup = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Account created successfully',
-      token,
-      user: {
-        id:         newUser.id,
-        username:   newUser.username,
-        email:      newUser.email,
-        avatar:     newUser.avatar,
-        membership: newUser.membership
-      }
+      token:   generateToken(newUser)
     });
 
   } catch (err) {
@@ -98,17 +91,10 @@ const login = async (req, res) => {
       { expiresIn: '30d' }
     );
 
-    res.json({
+       res.json({
       success: true,
       message: 'Login successful',
-      token,
-      user: {
-        id:         user.id,
-        username:   user.username,
-        email:      user.email,
-        avatar:     user.avatar,
-        membership: user.membership
-      }
+      token:   generateToken(user)
     });
 
   } catch (err) {

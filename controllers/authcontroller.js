@@ -16,12 +16,14 @@ const signup = async (req, res) => {
       if (existingUser.email === email) {
         return res.status(409).json({
           success: false,
+          message: "email already registered",
           errors: { email: 'Email already registered' }
         });
       }
       if (existingUser.username === username) {
         return res.status(409).json({
           success: false,
+            message: "Username already taken",
           errors: { username: 'Username already taken' }
         });
       }
@@ -48,12 +50,12 @@ const signup = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Account created successfully',
-      token:   generateToken(newUser)
+      token: token
     });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Internal server error'});
   }
 };
 
@@ -66,6 +68,7 @@ const login = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
+        message: 'No account found with this email',
         errors: { email: 'No account found with this email' }
       });
     }
@@ -81,6 +84,7 @@ const login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
+        message:"In correct password",
         errors: { password: 'Incorrect password' }
       });
     }
@@ -94,12 +98,12 @@ const login = async (req, res) => {
        res.json({
       success: true,
       message: 'Login successful',
-      token:   generateToken(user)
+      token: token
     });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message:  'Internal server error' });
   }
 };
 

@@ -7,11 +7,7 @@ const { signupSchema, loginSchema }           = require("../validations/authVali
 const validate                                = require("../middleware/validate");
 
 const upload = multer({ dest: "uploads/avatars/" });
-
-// ✅ /api/auth/signup
 router.post("/signup", upload.single("avatar"), validate(signupSchema), signup);
-
-// ✅ /api/auth/login
 router.post("/login", validate(loginSchema), login);
 
 module.exports = router;

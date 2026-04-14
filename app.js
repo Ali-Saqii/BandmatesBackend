@@ -10,9 +10,9 @@ const sequelize = require("./config/db");
 require("./models")
 
 const authRoutes = require("./routes/userRoutes")
-
+const albumRoutes = require("./routes/albumRoutes")
 app.use("/user",authRoutes)
-
+app.use("/user",albumRoutes)
 
 
 

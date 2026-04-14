@@ -90,6 +90,7 @@ const getAlbumDetail = async (req, res) => {
         mbid:      a.mbid,
         name:      a.name,
         artist:    a.artist,
+        url:       a.url,
         cover:     a.image[3]['#text'],
         listeners: a.listeners,
         playcount: a.playcount,

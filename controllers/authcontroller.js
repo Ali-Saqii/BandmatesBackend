@@ -1,15 +1,13 @@
 // controllers/authController.js
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const { User } = require('../models');
 
 const signup = async (req, res) => {
   try {
-    // ── Joi already validate kar chuka — req.validatedBody se lo
     const { username, email, password } = req.validatedBody;
 
-    // Check existing user
     const existingUser = await User.findOne({
       where: { [Op.or]: [{ email }, { username }] }
     });
@@ -44,7 +42,7 @@ const signup = async (req, res) => {
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, membership: newUser.membership },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.status(201).json({
@@ -97,7 +95,7 @@ const login = async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, membership: user.membership },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     res.json({

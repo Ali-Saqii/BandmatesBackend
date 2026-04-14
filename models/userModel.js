@@ -11,3 +11,5 @@ const user =  sequelize.define('User', {
     trial_ends_at:  { type: DataTypes.DATE, defaultValue: null },
     is_active:      { type: DataTypes.BOOLEAN, defaultValue: true },
   });
+
+  module.exports = user;

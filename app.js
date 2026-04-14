@@ -1,9 +1,18 @@
+
+require('dotenv').config(); 
 const express = require("express");
 const app = express();
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); 
 
 const sequelize = require("./config/db");
+require("./models")
+
+const authRoutes = require("./routes/userRoutes")
+
+app.use("/user",authRoutes)
+
 
 
 

@@ -3,7 +3,7 @@ const { Sequelize } = require("sequelize");
 const sequelize = new Sequelize("bandmates", "root", "", {
   host: "localhost",
   dialect: "mysql",
-  logging: console.log
+  logging: false
 });
 
 module.exports = sequelize;

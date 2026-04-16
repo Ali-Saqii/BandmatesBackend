@@ -7,7 +7,7 @@ const album = sequelize.define('Album', {
     name:     { type: DataTypes.STRING, allowNull: false },
     artist:   { type: DataTypes.STRING, allowNull: false },
     cover:    { type: DataTypes.TEXT },
-      isSaved:  { type: DataTypes.VIRTUAL, defaultValue: false }  
+    isSaved:  { type: DataTypes.VIRTUAL, defaultValue: false }  
   });
 
   module.exports = album;

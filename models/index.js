@@ -1,51 +1,148 @@
 const sequelize = require('../config/db');
 
-const User         = require('./userModel');
-const Album        = require('./albumModel');
-const Review       = require('./reviewsModel');
-const comment      = require('./commentsModel');
-const Collection   = require('./colletionModel');
-const Friend       = require('./friendsModel');
-const Notification = require('./notificationModel');
-const SavedAlbum   = require('./savedAlbums');
+const User          = require('./userModel');
+const Album         = require('./albumModel');
+const Review        = require('./reviewsModel');
+const Comment       = require('./commentsModel');
+const Collection    = require('./colletionModel');
+const Friend        = require('./friendsModel');
+const Notification  = require('./notificationModel');
+const SavedAlbum    = require('./savedAlbums');
 const SearchHistory = require('./searchHistory');
 
+User.hasMany(Review, {
+  foreignKey: 'user_id',
+  as: 'reviews',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE',
+});
+Review.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+});
 
-// User → Reviews
-User.hasMany(Review,       { foreignKey: 'user_id' });
-Review.belongsTo(User,     { foreignKey: 'user_id' });
+User.hasMany(Comment, {
+  foreignKey: 'user_id',
+  as: 'comments',
+  onDelete: 'CASCADE',
+});
+Comment.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+});
 
-// User → Comments
-User.hasMany(Comment,      { foreignKey: 'user_id' });
-comment.belongsTo(User,    { foreignKey: 'user_id' });
+User.hasMany(Collection, {
+  foreignKey: 'user_id',
+  as: 'collections',
+  onDelete: 'CASCADE',
+});
+Collection.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+});
 
-// User → Collections
-User.hasMany(Collection,   { foreignKey: 'user_id' });
-Collection.belongsTo(User, { foreignKey: 'user_id' });
+User.hasMany(Friend, {
+  foreignKey: 'sender_id',
+  as: 'sentRequests',
+  onDelete: 'CASCADE',
+});
+User.hasMany(Friend, {
+  foreignKey: 'receiver_id',
+  as: 'receivedRequests',
+  onDelete: 'CASCADE',
+});
 
-// User → Friends
-User.hasMany(Friend,       { foreignKey: 'sender_id' });
-User.hasMany(Friend,       { foreignKey: 'receiver_id' });
+Friend.belongsTo(User, {
+  foreignKey: 'sender_id',
+  as: 'sender',
+});
+Friend.belongsTo(User, {
+  foreignKey: 'receiver_id',
+  as: 'receiver',
+});
 
-// User → Notifications
-User.hasMany(Notification,     { foreignKey: 'user_id' });
-Notification.belongsTo(User,   { foreignKey: 'user_id' });
+User.hasMany(Notification, {
+  foreignKey: 'user_id',
+  as: 'notifications',
+  onDelete: 'CASCADE',
+});
+Notification.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+});
 
-// User → SavedAlbums
-User.hasMany(SavedAlbum,       { foreignKey: 'user_id' });
-SavedAlbum.belongsTo(User,     { foreignKey: 'user_id' });
+User.hasMany(SavedAlbum, {
+  foreignKey: 'user_id',
+  as: 'savedAlbums',
+  onDelete: 'CASCADE',
+});
+SavedAlbum.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+});
 
-// User → SearchHistory
-User.hasMany(SearchHistory,    { foreignKey: 'user_id' });
-SearchHistory.belongsTo(User,  { foreignKey: 'user_id' });
+User.hasMany(SearchHistory, {
+  foreignKey: 'user_id',
+  as: 'searchHistory',
+  onDelete: 'CASCADE',
+});
+SearchHistory.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+});
 
-// Album → Reviews
-Album.hasMany(Review,      { foreignKey: 'album_id' });
-Review.belongsTo(Album,    { foreignKey: 'album_id' });
 
-// Album → Comments
-Album.hasMany(Comment,     { foreignKey: 'album_id' });
-Comment.belongsTo(Album,   { foreignKey: 'album_id' });
+Album.hasMany(Review, {
+  foreignKey: 'album_id',
+  as: 'reviews',
+  onDelete: 'CASCADE',
+});
+Review.belongsTo(Album, {
+  foreignKey: 'album_id',
+  as: 'album',
+});
+
+Album.hasMany(Comment, {
+  foreignKey: 'album_id',
+  as: 'comments',
+  onDelete: 'CASCADE',
+});
+Comment.belongsTo(Album, {
+  foreignKey: 'album_id',
+  as: 'album',
+});
+
+Album.hasMany(SavedAlbum, {
+  foreignKey: 'album_id',
+  as: 'savedByUsers',
+  onDelete: 'CASCADE',
+});
+SavedAlbum.belongsTo(Album, {
+  foreignKey: 'album_id',
+  as: 'album',
+});
+
+Collection.hasMany(SavedAlbum, {
+  foreignKey: 'collection_id',
+  as: 'savedAlbums',
+  onDelete: 'SET NULL',
+});
+SavedAlbum.belongsTo(Collection, {
+  foreignKey: 'collection_id',
+  as: 'collection',
+});
+
+
+Comment.hasMany(Comment, {
+  foreignKey: 'parent_id',
+  as: 'replies',
+  onDelete: 'CASCADE',
+});
+Comment.belongsTo(Comment, {
+  foreignKey: 'parent_id',
+  as: 'parent',
+});
+
 
 module.exports = {
   sequelize,
@@ -57,5 +154,5 @@ module.exports = {
   Friend,
   Notification,
   SavedAlbum,
-  SearchHistory
+  SearchHistory,
 };

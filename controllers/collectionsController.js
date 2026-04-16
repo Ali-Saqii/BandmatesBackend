@@ -1,5 +1,4 @@
 const Collection = require("../models/colletionModel");
-const { collection } = require("../models/colletionModel")
 const { Op } = require('sequelize');
 
 const createCollection = async (req, res) => {

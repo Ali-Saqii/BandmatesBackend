@@ -7,7 +7,6 @@ const Collection = sequelize.define('Collection', {
   user_id:     { type: DataTypes.UUID, allowNull: false },
   name:        { type: DataTypes.STRING, allowNull: false },
   description: { type: DataTypes.TEXT },
-  is_public:   { type: DataTypes.BOOLEAN, defaultValue: true },
   cover:       { type: DataTypes.TEXT },
 });
 

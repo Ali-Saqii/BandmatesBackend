@@ -1,4 +1,4 @@
-
+/*
 // const axios = require("axios");
 // const { Op } = require("sequelize");
 
@@ -21,7 +21,9 @@
 //     const membership = req.user?.membership || "club";
 //     const limit = PLAN_LIMITS[membership];
 
-//     // 1. GET TOP TRACKS
+//     // ─────────────────────────────
+//     // 1. FETCH TOP TRACKS
+//     // ─────────────────────────────
 //     const response = await axios.get(LASTFM_URL, {
 //       params: {
 //         method: "chart.getTopTracks",
@@ -34,15 +36,13 @@
 //     const tracks = response?.data?.tracks?.track || [];
 //     console.log("🎵 TRACKS:", tracks.length);
 
-//     // 2. SAFE ALBUM EXTRACTION (FIXED)
+//     // ─────────────────────────────
+//     // 2. SAFE ALBUM EXTRACTION
+//     // ─────────────────────────────
 //     const albumsRaw = tracks
 //       .map((t) => {
 //         const artist = t.artist?.name;
-
-//         const albumName =
-//           t.album?.["#text"] ||
-//           t.name || // fallback
-//           null;
+//         const albumName = t.album?.["#text"] || t.name;
 
 //         if (!artist || !albumName) return null;
 
@@ -55,15 +55,17 @@
 
 //     console.log("💿 ALBUMS FOUND:", albumsRaw.length);
 
-//     if (albumsRaw.length === 0) {
+//     if (!albumsRaw.length) {
 //       return res.json({
 //         success: true,
-//         message: "No albums found from Last.fm",
+//         message: "No albums found",
 //         data: []
 //       });
 //     }
 
+//     // ─────────────────────────────
 //     // 3. UPSERT INTO DB
+//     // ─────────────────────────────
 //     const upsertedAlbums = await Promise.all(
 //       albumsRaw.map(async (a) => {
 //         const [album] = await Album.findOrCreate({
@@ -72,7 +74,7 @@
 //             artist: a.artist
 //           },
 //           defaults: {
-//             cover: null
+//             cover: ""
 //           }
 //         });
 
@@ -82,7 +84,9 @@
 
 //     const albumIds = upsertedAlbums.map((a) => a.id);
 
+//     // ─────────────────────────────
 //     // 4. FETCH RELATED DATA
+//     // ─────────────────────────────
 //     const [allReviews, allComments, savedAlbums] = await Promise.all([
 //       Review.findAll({
 //         where: { album_id: { [Op.in]: albumIds } },
@@ -103,7 +107,7 @@
 //         include: [
 //           {
 //             model: User,
-//            as: "user",
+//             as: "user",
 //             attributes: ["username", "avatar"]
 //           }
 //         ]
@@ -117,7 +121,9 @@
 //       })
 //     ]);
 
+//     // ─────────────────────────────
 //     // 5. GROUP DATA
+//     // ─────────────────────────────
 //     const reviewsByAlbum = {};
 //     const commentsByAlbum = {};
 
@@ -133,7 +139,9 @@
 
 //     const savedSet = new Set(savedAlbums.map((s) => s.album_id));
 
-//     // 6. BUILD RESPONSE
+//     // ─────────────────────────────
+//     // 6. BUILD FINAL RESPONSE
+//     // ─────────────────────────────
 //     const albums = upsertedAlbums.map((album) => {
 //       const reviews = (reviewsByAlbum[album.id] || []).map((r) => ({
 //         id: r.id,
@@ -160,11 +168,21 @@
 //             ).toFixed(1)
 //           : 0;
 
+//       // 🎧 LAST.FM PLAY URL
+//       const playUrl = `https://www.last.fm/music/${encodeURIComponent(
+//         album.artist
+//       )}/${encodeURIComponent(album.name)}`;
+
 //       return {
 //         id: album.id,
 //         name: album.name,
 //         artist: album.artist,
-//         cover: album.cover,
+
+//         // 🖼️ image (from DB or empty)
+//         image: album.cover || "",
+
+//         // 🎧 play link
+//         albumPlayUrl: playUrl,
 
 //         averageRating: parseFloat(avgRating),
 //         totalReviews: reviews.length,
@@ -176,7 +194,9 @@
 //       };
 //     });
 
+//     // ─────────────────────────────
 //     // 7. APPLY PLAN LIMIT
+//     // ─────────────────────────────
 //     const final =
 //       limit === Infinity ? albums : albums.slice(0, limit);
 
@@ -198,6 +218,8 @@
 // };
 
 // module.exports = { getTrendingAlbums };
+
+*/
 const axios = require("axios");
 const { Op } = require("sequelize");
 
@@ -213,6 +235,7 @@ const PLAN_LIMITS = {
 const getTrendingAlbums = async (req, res) => {
   try {
     console.log("🔥 CONTROLLER HIT");
+    console.log("🔑 LASTFM KEY:", LASTFM_KEY);
 
     const { User, Album, Review, Comment, SavedAlbum } =
       req.app.get("models");
@@ -221,61 +244,124 @@ const getTrendingAlbums = async (req, res) => {
     const limit = PLAN_LIMITS[membership];
 
     // ─────────────────────────────
-    // 1. FETCH TOP TRACKS
+    // 1. FETCH TRENDING TRACKS
     // ─────────────────────────────
-    const response = await axios.get(LASTFM_URL, {
+    const trackRes = await axios.get(LASTFM_URL, {
       params: {
         method: "chart.getTopTracks",
         api_key: LASTFM_KEY,
         format: "json",
-        limit: 30
+        limit: 50
       }
     });
 
-    const tracks = response?.data?.tracks?.track || [];
+    const tracks = trackRes?.data?.tracks?.track || [];
     console.log("🎵 TRACKS:", tracks.length);
 
     // ─────────────────────────────
-    // 2. SAFE ALBUM EXTRACTION
+    // 2. GET ALBUM NAMES USING track.getInfo
     // ─────────────────────────────
-    const albumsRaw = tracks
-      .map((t) => {
-        const artist = t.artist?.name;
-        const albumName = t.album?.["#text"] || t.name;
+    const albumPairs = await Promise.all(
+      tracks.map(async (track) => {
+        try {
+          const infoRes = await axios.get(LASTFM_URL, {
+            params: {
+              method: "track.getInfo",
+              artist: track.artist.name,
+              track: track.name,
+              api_key: LASTFM_KEY,
+              format: "json"
+            }
+          });
 
-        if (!artist || !albumName) return null;
+          const albumName = infoRes?.data?.track?.album?.title;
+          const artist = track.artist.name;
 
-        return {
-          albumName: albumName.trim(),
-          artist: artist.trim()
-        };
+          if (!albumName || !artist) return null;
+
+          return { artist, albumName };
+        } catch {
+          return null;
+        }
       })
-      .filter(Boolean);
+    );
 
-    console.log("💿 ALBUMS FOUND:", albumsRaw.length);
+    // Remove duplicates
+    const uniqueAlbums = [
+      ...new Map(
+        albumPairs
+          .filter(Boolean)
+          .map((a) => [`${a.artist}-${a.albumName}`, a])
+      ).values()
+    ];
 
-    if (!albumsRaw.length) {
+    console.log("💿 UNIQUE ALBUMS:", uniqueAlbums.length);
+
+    if (!uniqueAlbums.length) {
       return res.json({
         success: true,
-        message: "No albums found",
+        plan: membership,
+        total: 0,
         data: []
       });
     }
 
     // ─────────────────────────────
-    // 3. UPSERT INTO DB
+    // 3. FETCH ALBUM DETAILS (IMAGE + MBID)
+    // ─────────────────────────────
+    const albumDetails = await Promise.all(
+      uniqueAlbums.map(async ({ artist, albumName }) => {
+        try {
+          const res = await axios.get(LASTFM_URL, {
+            params: {
+              method: "album.getInfo",
+              artist,
+              album: albumName,
+              api_key: LASTFM_KEY,
+              format: "json"
+            }
+          });
+
+          const album = res?.data?.album;
+          if (!album) return null;
+
+          return {
+            name: album.name,
+            artist: album.artist,
+            mbid: album.mbid || `${album.artist}::${album.name}`,
+            cover:
+              album.image?.find((img) => img.size === "extralarge")?.[
+                "#text"
+              ] || "",
+            releaseDate: album.wiki?.published || new Date()
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const validAlbums = albumDetails.filter(Boolean);
+    console.log("✅ VALID ALBUMS:", validAlbums.length);
+
+    // ─────────────────────────────
+    // 4. UPSERT INTO DATABASE
     // ─────────────────────────────
     const upsertedAlbums = await Promise.all(
-      albumsRaw.map(async (a) => {
+      validAlbums.map(async (a) => {
         const [album] = await Album.findOrCreate({
-          where: {
-            name: a.albumName,
-            artist: a.artist
-          },
+          where: { mbid: a.mbid },
           defaults: {
-            cover: ""
+            name: a.name,
+            artist: a.artist,
+            cover: a.cover
           }
         });
+
+        if (!album.cover && a.cover) {
+          album.cover = a.cover;
+          await album.save();
+        }
 
         return album;
       })
@@ -284,7 +370,7 @@ const getTrendingAlbums = async (req, res) => {
     const albumIds = upsertedAlbums.map((a) => a.id);
 
     // ─────────────────────────────
-    // 4. FETCH RELATED DATA
+    // 5. FETCH RELATED DATA
     // ─────────────────────────────
     const [allReviews, allComments, savedAlbums] = await Promise.all([
       Review.findAll({
@@ -297,7 +383,6 @@ const getTrendingAlbums = async (req, res) => {
           }
         ]
       }),
-
       Comment.findAll({
         where: {
           album_id: { [Op.in]: albumIds },
@@ -311,18 +396,15 @@ const getTrendingAlbums = async (req, res) => {
           }
         ]
       }),
-
       SavedAlbum.findAll({
         where: {
-          user_id: req.user.id,
+          user_id: req.user?.id || 0,
           album_id: { [Op.in]: albumIds }
         }
       })
     ]);
 
-    // ─────────────────────────────
-    // 5. GROUP DATA
-    // ─────────────────────────────
+    // Group reviews and comments
     const reviewsByAlbum = {};
     const commentsByAlbum = {};
 
@@ -332,70 +414,61 @@ const getTrendingAlbums = async (req, res) => {
     });
 
     allComments.forEach((c) => {
-      if (!commentsByAlbum[c.album_id]) commentsByAlbum[c.album_id] = [];
+      if (!commentsByAlbum[c.album_id])
+        commentsByAlbum[c.album_id] = [];
       commentsByAlbum[c.album_id].push(c);
     });
 
     const savedSet = new Set(savedAlbums.map((s) => s.album_id));
 
     // ─────────────────────────────
-    // 6. BUILD FINAL RESPONSE
+    // 6. FINAL RESPONSE (SwiftUI Compatible)
     // ─────────────────────────────
     const albums = upsertedAlbums.map((album) => {
       const reviews = (reviewsByAlbum[album.id] || []).map((r) => ({
         id: r.id,
-        username: r.User?.username,
-        avatar: r.User?.avatar,
+        personImage: r.user?.avatar || "",
+        personName: r.user?.username || "Anonymous",
+        dateOfRating: r.createdAt,
         rating: parseFloat(r.rating || 0),
-        review: r.review_text || "",
-        createdAt: r.createdAt
+        reviewBody: r.review_text || ""
       }));
 
-      const comments = (commentsByAlbum[album.id] || []).map((c) => ({
+      const replies = (commentsByAlbum[album.id] || []).map((c) => ({
         id: c.id,
-        username: c.User?.username,
-        avatar: c.User?.avatar,
-        text: c.text,
-        createdAt: c.createdAt
+        image: c.user?.avatar || "",
+        name: c.user?.username || "Anonymous",
+        commentText: c.text,
+        commentTime: c.createdAt
       }));
 
-      const avgRating =
+      const averageRating =
         reviews.length > 0
-          ? (
-              reviews.reduce((sum, r) => sum + r.rating, 0) /
-              reviews.length
-            ).toFixed(1)
+          ? parseFloat(
+              (
+                reviews.reduce((sum, r) => sum + r.rating, 0) /
+                reviews.length
+              ).toFixed(1)
+            )
           : 0;
-
-      // 🎧 LAST.FM PLAY URL
-      const playUrl = `https://www.last.fm/music/${encodeURIComponent(
-        album.artist
-      )}/${encodeURIComponent(album.name)}`;
 
       return {
         id: album.id,
-        name: album.name,
-        artist: album.artist,
-
-        // 🖼️ image (from DB or empty)
         image: album.cover || "",
-
-        // 🎧 play link
-        albumPlayUrl: playUrl,
-
-        averageRating: parseFloat(avgRating),
-        totalReviews: reviews.length,
-
+        albumName: album.name,
+        albumArtistName: album.artist,
+        releaseDate: album.createdAt,
+        averageRating,
+        totalRatingCount: reviews.length,
         reviews,
-        comments,
-
-        isSaved: savedSet.has(album.id)
+        replies,
+        isSaved: savedSet.has(album.id),
+        albumPlayLink: `https://www.last.fm/music/${encodeURIComponent(
+          album.artist
+        )}/${encodeURIComponent(album.name)}`
       };
     });
 
-    // ─────────────────────────────
-    // 7. APPLY PLAN LIMIT
-    // ─────────────────────────────
     const final =
       limit === Infinity ? albums : albums.slice(0, limit);
 
@@ -405,13 +478,13 @@ const getTrendingAlbums = async (req, res) => {
       total: final.length,
       data: final
     });
-
   } catch (err) {
-    console.log("❌ ERROR:", err.response?.data || err.message);
+    console.error("❌ ERROR:", err.response?.data || err.message);
 
     return res.status(500).json({
       success: false,
-      error: err.message
+      message: "Failed to fetch albums",
+      error: err.response?.data || err.message
     });
   }
 };

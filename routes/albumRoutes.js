@@ -5,3 +5,5 @@ const albumControllers = require("../controllers/albumController")
 router.get("/get/albums",auth,albumControllers.getTrendingAlbums)
 
 module.exports = router
+
+// Qra*RPpNZV<8Cb*

@@ -2,12 +2,13 @@
 require('dotenv').config(); 
 const express = require("express");
 const app = express();
-
+console.log('Last.fm API Key:', process.env.LASTFM_API_KEY);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 
 const sequelize = require("./config/db");
-require("./models")
+const models = require("./models");
+app.set("models", models);
 
 const authRoutes = require("./routes/userRoutes")
 const albumRoutes = require("./routes/albumRoutes")

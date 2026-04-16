@@ -25,7 +25,6 @@ router.get('/api/ranking', async (req, res) => {
           dist[star]++;
         });
 
-        // Average
         const sum = reviews.reduce((acc, r) => acc + parseFloat(r.rating), 0);
         const avg = (sum / reviews.length).toFixed(1);
 

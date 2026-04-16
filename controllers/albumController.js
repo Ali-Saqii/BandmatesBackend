@@ -1,163 +1,418 @@
-const axios  = require('axios');
-const { Op } = require('sequelize');
 
-const LASTFM_KEY  = process.env.LASTFM_API_KEY;
-const LASTFM_URL  = 'https://ws.audioscrobbler.com/2.0/';
+// const axios = require("axios");
+// const { Op } = require("sequelize");
 
-const PLAN_LIMITS = { club: 10, arena: 25, stadium: Infinity };
+// const LASTFM_URL = "https://ws.audioscrobbler.com/2.0/";
+// const LASTFM_KEY = process.env.LASTFM_API_KEY;
 
-// ─────────────────────────────────────────
-// GET TRENDING ALBUMS
-// GET /albums/trending
-// ─────────────────────────────────────────
+// const PLAN_LIMITS = {
+//   club: 10,
+//   arena: 25,
+//   stadium: Infinity
+// };
+
+// const getTrendingAlbums = async (req, res) => {
+//   try {
+//     console.log("🔥 CONTROLLER HIT");
+
+//     const { User, Album, Review, Comment, SavedAlbum } =
+//       req.app.get("models");
+
+//     const membership = req.user?.membership || "club";
+//     const limit = PLAN_LIMITS[membership];
+
+//     // 1. GET TOP TRACKS
+//     const response = await axios.get(LASTFM_URL, {
+//       params: {
+//         method: "chart.getTopTracks",
+//         api_key: LASTFM_KEY,
+//         format: "json",
+//         limit: 30
+//       }
+//     });
+
+//     const tracks = response?.data?.tracks?.track || [];
+//     console.log("🎵 TRACKS:", tracks.length);
+
+//     // 2. SAFE ALBUM EXTRACTION (FIXED)
+//     const albumsRaw = tracks
+//       .map((t) => {
+//         const artist = t.artist?.name;
+
+//         const albumName =
+//           t.album?.["#text"] ||
+//           t.name || // fallback
+//           null;
+
+//         if (!artist || !albumName) return null;
+
+//         return {
+//           albumName: albumName.trim(),
+//           artist: artist.trim()
+//         };
+//       })
+//       .filter(Boolean);
+
+//     console.log("💿 ALBUMS FOUND:", albumsRaw.length);
+
+//     if (albumsRaw.length === 0) {
+//       return res.json({
+//         success: true,
+//         message: "No albums found from Last.fm",
+//         data: []
+//       });
+//     }
+
+//     // 3. UPSERT INTO DB
+//     const upsertedAlbums = await Promise.all(
+//       albumsRaw.map(async (a) => {
+//         const [album] = await Album.findOrCreate({
+//           where: {
+//             name: a.albumName,
+//             artist: a.artist
+//           },
+//           defaults: {
+//             cover: null
+//           }
+//         });
+
+//         return album;
+//       })
+//     );
+
+//     const albumIds = upsertedAlbums.map((a) => a.id);
+
+//     // 4. FETCH RELATED DATA
+//     const [allReviews, allComments, savedAlbums] = await Promise.all([
+//       Review.findAll({
+//         where: { album_id: { [Op.in]: albumIds } },
+//         include: [
+//           {
+//             model: User,
+//             as: "user",
+//             attributes: ["username", "avatar"]
+//           }
+//         ]
+//       }),
+
+//       Comment.findAll({
+//         where: {
+//           album_id: { [Op.in]: albumIds },
+//           parent_id: null
+//         },
+//         include: [
+//           {
+//             model: User,
+//            as: "user",
+//             attributes: ["username", "avatar"]
+//           }
+//         ]
+//       }),
+
+//       SavedAlbum.findAll({
+//         where: {
+//           user_id: req.user.id,
+//           album_id: { [Op.in]: albumIds }
+//         }
+//       })
+//     ]);
+
+//     // 5. GROUP DATA
+//     const reviewsByAlbum = {};
+//     const commentsByAlbum = {};
+
+//     allReviews.forEach((r) => {
+//       if (!reviewsByAlbum[r.album_id]) reviewsByAlbum[r.album_id] = [];
+//       reviewsByAlbum[r.album_id].push(r);
+//     });
+
+//     allComments.forEach((c) => {
+//       if (!commentsByAlbum[c.album_id]) commentsByAlbum[c.album_id] = [];
+//       commentsByAlbum[c.album_id].push(c);
+//     });
+
+//     const savedSet = new Set(savedAlbums.map((s) => s.album_id));
+
+//     // 6. BUILD RESPONSE
+//     const albums = upsertedAlbums.map((album) => {
+//       const reviews = (reviewsByAlbum[album.id] || []).map((r) => ({
+//         id: r.id,
+//         username: r.User?.username,
+//         avatar: r.User?.avatar,
+//         rating: parseFloat(r.rating || 0),
+//         review: r.review_text || "",
+//         createdAt: r.createdAt
+//       }));
+
+//       const comments = (commentsByAlbum[album.id] || []).map((c) => ({
+//         id: c.id,
+//         username: c.User?.username,
+//         avatar: c.User?.avatar,
+//         text: c.text,
+//         createdAt: c.createdAt
+//       }));
+
+//       const avgRating =
+//         reviews.length > 0
+//           ? (
+//               reviews.reduce((sum, r) => sum + r.rating, 0) /
+//               reviews.length
+//             ).toFixed(1)
+//           : 0;
+
+//       return {
+//         id: album.id,
+//         name: album.name,
+//         artist: album.artist,
+//         cover: album.cover,
+
+//         averageRating: parseFloat(avgRating),
+//         totalReviews: reviews.length,
+
+//         reviews,
+//         comments,
+
+//         isSaved: savedSet.has(album.id)
+//       };
+//     });
+
+//     // 7. APPLY PLAN LIMIT
+//     const final =
+//       limit === Infinity ? albums : albums.slice(0, limit);
+
+//     return res.json({
+//       success: true,
+//       plan: membership,
+//       total: final.length,
+//       data: final
+//     });
+
+//   } catch (err) {
+//     console.log("❌ ERROR:", err.response?.data || err.message);
+
+//     return res.status(500).json({
+//       success: false,
+//       error: err.message
+//     });
+//   }
+// };
+
+// module.exports = { getTrendingAlbums };
+const axios = require("axios");
+const { Op } = require("sequelize");
+
+const LASTFM_URL = "https://ws.audioscrobbler.com/2.0/";
+const LASTFM_KEY = process.env.LASTFM_API_KEY;
+
+const PLAN_LIMITS = {
+  club: 10,
+  arena: 25,
+  stadium: Infinity
+};
+
 const getTrendingAlbums = async (req, res) => {
   try {
-    const { User, Album, Review, Comment, SavedAlbum } = req.app.get('models');
+    console.log("🔥 CONTROLLER HIT");
 
-    const membership = req.user.membership;
-    const limit      = PLAN_LIMITS[membership];
+    const { User, Album, Review, Comment, SavedAlbum } =
+      req.app.get("models");
 
-    if (!limit) {
-      return res.status(403).json({ success: false, message: 'Invalid membership plan' });
-    }
+    const membership = req.user?.membership || "club";
+    const limit = PLAN_LIMITS[membership];
 
-    // ── 1. Fetch trending tracks from Last.fm ─────────────────
-    const chartResponse = await axios.get(LASTFM_URL, {
+    // ─────────────────────────────
+    // 1. FETCH TOP TRACKS
+    // ─────────────────────────────
+    const response = await axios.get(LASTFM_URL, {
       params: {
-        method:  'chart.getTopTracks',
+        method: "chart.getTopTracks",
         api_key: LASTFM_KEY,
-        format:  'json',
-        limit:   limit === Infinity ? 50 : limit
+        format: "json",
+        limit: 30
       }
     });
 
-    const tracks = chartResponse.data.tracks.track;
+    const tracks = response?.data?.tracks?.track || [];
+    console.log("🎵 TRACKS:", tracks.length);
 
-    // ── 2. Fetch album details from Last.fm in parallel ───────
-    const albumResponses = await Promise.all(
-      tracks.map(track =>
-        axios.get(LASTFM_URL, {
-          params: {
-            method:  'album.getInfo',
-            artist:  track.artist.name,
-            album:   track.album?.['#text'] || track.name,
-            api_key: LASTFM_KEY,
-            format:  'json'
-          }
-        }).catch(() => null)
-      )
-    );
+    // ─────────────────────────────
+    // 2. SAFE ALBUM EXTRACTION
+    // ─────────────────────────────
+    const albumsRaw = tracks
+      .map((t) => {
+        const artist = t.artist?.name;
+        const albumName = t.album?.["#text"] || t.name;
 
-    const validAlbums = albumResponses.filter(r => r && r.data?.album);
+        if (!artist || !albumName) return null;
 
-    // ── 3. Upsert albums into DB ──────────────────────────────
+        return {
+          albumName: albumName.trim(),
+          artist: artist.trim()
+        };
+      })
+      .filter(Boolean);
+
+    console.log("💿 ALBUMS FOUND:", albumsRaw.length);
+
+    if (!albumsRaw.length) {
+      return res.json({
+        success: true,
+        message: "No albums found",
+        data: []
+      });
+    }
+
+    // ─────────────────────────────
+    // 3. UPSERT INTO DB
+    // ─────────────────────────────
     const upsertedAlbums = await Promise.all(
-      validAlbums.map(r => {
-        const a = r.data.album;
-        return Album.findOrCreate({
-          where: { mbid: a.mbid || `${a.artist}::${a.name}` },
+      albumsRaw.map(async (a) => {
+        const [album] = await Album.findOrCreate({
+          where: {
+            name: a.albumName,
+            artist: a.artist
+          },
           defaults: {
-            name:   a.name,
-            artist: a.artist,
-            cover:  a.image?.[3]?.['#text'] || ''
+            cover: ""
           }
-        }).then(([album]) => ({ raw: a, dbAlbum: album }));
+        });
+
+        return album;
       })
     );
 
-    const albumIds = upsertedAlbums.map(({ dbAlbum }) => dbAlbum.id);
+    const albumIds = upsertedAlbums.map((a) => a.id);
 
-    // ── 4. Fetch reviews, comments, savedAlbums in parallel ───
+    // ─────────────────────────────
+    // 4. FETCH RELATED DATA
+    // ─────────────────────────────
     const [allReviews, allComments, savedAlbums] = await Promise.all([
       Review.findAll({
-        where:   { album_id: { [Op.in]: albumIds } },
-        include: [{ model: User, attributes: ['username', 'avatar'] }]
+        where: { album_id: { [Op.in]: albumIds } },
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["username", "avatar"]
+          }
+        ]
       }),
+
       Comment.findAll({
-        where:   { album_id: { [Op.in]: albumIds }, parent_id: null },
-        include: [{ model: User, attributes: ['username', 'avatar'] }]
-      }),
-      SavedAlbum.findAll({                                  // only current user's saved albums
         where: {
-          user_id:  req.user.id,
-          album_id: { [Op.in]: albumIds }
+          album_id: { [Op.in]: albumIds },
+          parent_id: null
         },
-        attributes: ['album_id']
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["username", "avatar"]
+          }
+        ]
+      }),
+
+      SavedAlbum.findAll({
+        where: {
+          user_id: req.user.id,
+          album_id: { [Op.in]: albumIds }
+        }
       })
     ]);
 
-    // ── 5. Build a Set of saved album IDs for O(1) lookup ─────
-    const savedAlbumIds = new Set(savedAlbums.map(s => s.album_id));
+    // ─────────────────────────────
+    // 5. GROUP DATA
+    // ─────────────────────────────
+    const reviewsByAlbum = {};
+    const commentsByAlbum = {};
 
-// ── 6. Group reviews + comments by album_id ───────────────
-const reviewsByAlbum  = {};
-const commentsByAlbum = {};
+    allReviews.forEach((r) => {
+      if (!reviewsByAlbum[r.album_id]) reviewsByAlbum[r.album_id] = [];
+      reviewsByAlbum[r.album_id].push(r);
+    });
 
-allReviews.forEach(r => {
-  if (!reviewsByAlbum[r.album_id])  reviewsByAlbum[r.album_id]  = [];
-  reviewsByAlbum[r.album_id].push(r);
-});
+    allComments.forEach((c) => {
+      if (!commentsByAlbum[c.album_id]) commentsByAlbum[c.album_id] = [];
+      commentsByAlbum[c.album_id].push(c);
+    });
 
-allComments.forEach(c => {
-  if (!commentsByAlbum[c.album_id]) commentsByAlbum[c.album_id] = [];
-  commentsByAlbum[c.album_id].push(c);
-});
+    const savedSet = new Set(savedAlbums.map((s) => s.album_id));
 
-// ── 7. Shape final response ───────────────────────────────
-const albums = upsertedAlbums.map(({ dbAlbum }) => {
+    // ─────────────────────────────
+    // 6. BUILD FINAL RESPONSE
+    // ─────────────────────────────
+    const albums = upsertedAlbums.map((album) => {
+      const reviews = (reviewsByAlbum[album.id] || []).map((r) => ({
+        id: r.id,
+        username: r.User?.username,
+        avatar: r.User?.avatar,
+        rating: parseFloat(r.rating || 0),
+        review: r.review_text || "",
+        createdAt: r.createdAt
+      }));
 
-  const reviews = (reviewsByAlbum[dbAlbum.id] || []).map(r => ({
-    id:           r.id,
-    personImage:  r.User?.avatar   || '',
-    personName:   r.User?.username || 'Anonymous',
-    dateOfRating: r.createdAt,
-    rating:       parseFloat(r.rating),
-    reviewBody:   r.review_text    || ''
-  }));
+      const comments = (commentsByAlbum[album.id] || []).map((c) => ({
+        id: c.id,
+        username: c.User?.username,
+        avatar: c.User?.avatar,
+        text: c.text,
+        createdAt: c.createdAt
+      }));
 
-  const comments = (commentsByAlbum[dbAlbum.id] || []).map(c => ({  // ← was: replies
-    id:          c.id,
-    image:       c.User?.avatar   || '',
-    name:        c.User?.username || 'Anonymous',
-    commentText: c.text,                                              // ← was: replieText
-    commentTime: c.createdAt                                          // ← was: replieTime
-  }));
+      const avgRating =
+        reviews.length > 0
+          ? (
+              reviews.reduce((sum, r) => sum + r.rating, 0) /
+              reviews.length
+            ).toFixed(1)
+          : 0;
 
-  const averageRating = reviews.length
-    ? parseFloat(
-        (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-      )
-    : 0.0;
+      // 🎧 LAST.FM PLAY URL
+      const playUrl = `https://www.last.fm/music/${encodeURIComponent(
+        album.artist
+      )}/${encodeURIComponent(album.name)}`;
 
-  return {
-    id:               dbAlbum.id,
-    image:            dbAlbum.cover,
-    albumName:        dbAlbum.name,
-    albumArtistName:  dbAlbum.artist,
-    releaseDate:      dbAlbum.createdAt,
-    averageRating,
-    totalRatingCount: reviews.length,
-    reviews,
-    comments,                                                         // ← was: replies
-    isSaved:          savedAlbumIds.has(dbAlbum.id),
-    albumPlayLink:    `https://www.last.fm/music/${encodeURIComponent(dbAlbum.artist)}/${encodeURIComponent(dbAlbum.name)}`
-  };
-});
+      return {
+        id: album.id,
+        name: album.name,
+        artist: album.artist,
 
-    // ── 8. Apply plan limit ───────────────────────────────────
-    const limitedAlbums = limit === Infinity ? albums : albums.slice(0, limit);
+        // 🖼️ image (from DB or empty)
+        image: album.cover || "",
 
-    res.json({
-      success:    true,
-      plan:       membership,
-      plan_limit: limit === Infinity ? 'unlimited' : limit,
-      total:      limitedAlbums.length,
-      data:       limitedAlbums
+        // 🎧 play link
+        albumPlayUrl: playUrl,
+
+        averageRating: parseFloat(avgRating),
+        totalReviews: reviews.length,
+
+        reviews,
+        comments,
+
+        isSaved: savedSet.has(album.id)
+      };
+    });
+
+    // ─────────────────────────────
+    // 7. APPLY PLAN LIMIT
+    // ─────────────────────────────
+    const final =
+      limit === Infinity ? albums : albums.slice(0, limit);
+
+    return res.json({
+      success: true,
+      plan: membership,
+      total: final.length,
+      data: final
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+    console.log("❌ ERROR:", err.response?.data || err.message);
+
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
   }
 };
 

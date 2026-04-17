@@ -95,8 +95,92 @@ if (isEmpty(name) && isEmpty(description)) {
     }
 }
 
+// get collections
 
+const getUserCollection = async (req , res) => {
+    try {
+        const userId = req.user.id;
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = 6;
+        const offset = (page - 1) * limit;
+
+        const { rows, count} = await Collection.findAndCountAll({
+            where:{
+                user_id: userId
+            },
+            limit,
+            offset,
+            order:[["createdAt","DESC"]]
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Collections fetched successfully",
+            data: rows,
+            pagination: {
+                totalItems: count,
+                currentPage: page,
+                totalPages: Math.ceil(count / limit),
+                perPage: limit
+            }
+        });
+
+    } catch (error) {
+  console.error("🔥 Get Collections Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+const deleteCollection = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                message: "Collection id is required"
+            });
+        }
+
+        const collection = await Collection.findOne({
+            where: {
+                id,
+                user_id: userId
+            }
+        });
+
+        if (!collection) {
+            return res.status(404).json({
+                success: false,
+                message: "Collection not found"
+            });
+        }
+
+        collection.isDeleted = true;
+        await collection.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Collection deleted successfully"
+        });
+
+    } catch (error) {
+        console.error("🔥 Delete Collection Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
 module.exports = {
     createCollection,
-    updateCollection
+    updateCollection,
+    getUserCollection,
+    deleteCollection
 }

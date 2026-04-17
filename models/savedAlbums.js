@@ -4,7 +4,7 @@ const savedAlbum = sequelize.define('SavedAlbum', {
   id:            { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   user_id:       { type: DataTypes.UUID, allowNull: false },
   album_id:      { type: DataTypes.UUID, allowNull: false },
-  collection_id: { type: DataTypes.UUID, defaultValue: false }, // null = not in any collection
+  collection_id: { type: DataTypes.UUID, defaultValue: false },
 });
 
 module.exports = savedAlbum

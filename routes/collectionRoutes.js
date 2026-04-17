@@ -5,5 +5,5 @@ cControllers = require("../controllers/collectionsController")
 
 
 router.post("/create/collection",auth, cControllers.createCollection)
-
+router.put("/update/collection/:id",auth,cControllers.updateCollection)
 module.exports = router

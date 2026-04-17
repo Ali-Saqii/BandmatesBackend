@@ -68,9 +68,8 @@ const removeAlbum = async (req, res) => {
                 message: "saved album not found to delete"
             })
         }
-        record.isDeleted = true;
-        await record.save();
-        
+        await record.destroy();
+
         return res.status(200).json({
             success: true,
             message: "Album removed from collection"

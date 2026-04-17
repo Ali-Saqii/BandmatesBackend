@@ -1,4 +1,4 @@
-const Collection = require("../models/colletionModel");
+const { Collection, SavedAlbum, Album } = require("../models");
 const { Op } = require('sequelize');
 
 const createCollection = async (req, res) => {
@@ -97,23 +97,101 @@ if (isEmpty(name) && isEmpty(description)) {
 
 // get collections
 
-const getUserCollection = async (req , res) => {
+// const getUserCollection = async (req , res) => {
+//     try {
+//         const userId = req.user.id;
+
+//         const page = parseInt(req.query.page) || 1;
+//         const limit = 6;
+//         const offset = (page - 1) * limit;
+
+//         const { rows, count} = await Collection.findAndCountAll({
+//             where:{
+//                 user_id: userId
+//             },
+//             limit,
+//             offset,
+//             order:[["createdAt","DESC"]]
+//         });
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Collections fetched successfully",
+//             data: rows,
+//             pagination: {
+//                 totalItems: count,
+//                 currentPage: page,
+//                 totalPages: Math.ceil(count / limit),
+//                 perPage: limit
+//             }
+//         });
+
+//     } catch (error) {
+//   console.error("🔥 Get Collections Error:", error);
+
+//         return res.status(500).json({
+//             success: false,
+//             message: error.message
+//         });
+//     }
+// }
+
+
+const getUserCollection = async (req, res) => {
     try {
+        // 🔐 1. Auth check
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized access"
+            });
+        }
+
         const userId = req.user.id;
 
-        const page = parseInt(req.query.page) || 1;
+        // 📄 2. Validate pagination
+        let page = parseInt(req.query.page);
+        if (isNaN(page) || page < 1) page = 1;
+
         const limit = 6;
         const offset = (page - 1) * limit;
 
-        const { rows, count} = await Collection.findAndCountAll({
-            where:{
-                user_id: userId
-            },
+        // 🗃️ 3. Fetch collections
+        const { rows, count } = await Collection.findAndCountAll({
+            where: { user_id: userId },
             limit,
             offset,
-            order:[["createdAt","DESC"]]
+            order: [["createdAt", "DESC"]],
+            include: [
+                {
+                    model: SavedAlbum,
+                    as: "savedAlbums",
+                    include: [
+                        {
+                            model: Album,
+                            as: "album"
+                        }
+                    ]
+                }
+            ]
         });
 
+        // 📭 4. No data case (NOT an error, but handle it cleanly)
+        if (!rows || rows.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No collections found",
+                data: [],
+                pagination: {
+                    totalItems: 0,
+                    currentPage: page,
+                    totalPages: 0,
+                    perPage: limit
+                }
+            });
+        }
+
+        // ✅ 5. Success response
         return res.status(200).json({
             success: true,
             message: "Collections fetched successfully",
@@ -127,14 +205,31 @@ const getUserCollection = async (req , res) => {
         });
 
     } catch (error) {
-  console.error("🔥 Get Collections Error:", error);
+        console.error("🔥 Get Collections Error:", error);
 
+        // ⚠️ 6. Sequelize-specific errors (EXPECTED)
+        if (error.name === "SequelizeValidationError") {
+            return res.status(400).json({
+                success: false,
+                message: "Validation error",
+                errors: error.errors.map(e => e.message)
+            });
+        }
+
+        if (error.name === "SequelizeDatabaseError") {
+            return res.status(400).json({
+                success: false,
+                message: "Database query error"
+            });
+        }
+
+        // 💥 7. Unknown error (fallback)
         return res.status(500).json({
             success: false,
-            message: error.message
+            message: "Internal server error"
         });
     }
-}
+};
 const deleteCollection = async (req, res) => {
     try {
         const { id } = req.params;

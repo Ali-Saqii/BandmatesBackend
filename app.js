@@ -13,10 +13,11 @@ app.set("models", models);
 const authRoutes = require("./routes/userRoutes")
 const albumRoutes = require("./routes/albumRoutes")
 const collerctionRoutes = require("./routes/collectionRoutes")
+const savedAlbumsRoutes = require("./routes/savedAlbumRoutes")
 app.use("/user",authRoutes)
 app.use("/user",albumRoutes)
 app.use("/user",collerctionRoutes)
-
+app.use("/user",savedAlbumsRoutes)
 
 async function init() {
   try {

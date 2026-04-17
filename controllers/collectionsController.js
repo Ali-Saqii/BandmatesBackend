@@ -256,9 +256,9 @@ const deleteCollection = async (req, res) => {
             });
         }
 
-        collection.isDeleted = true;
-        await collection.save();
-
+        // collection.isDeleted = true; /// soft delete
+        // await collection.save();
+         await collection.destroy();
         return res.status(200).json({
             success: true,
             message: "Collection deleted successfully"

@@ -10,12 +10,15 @@ const user =  sequelize.define('User', {
     description:    {type: DataTypes.STRING ,allowNull: true},      
     avatar:         { type: DataTypes.TEXT, defaultValue: null },
     membership:     { type: DataTypes.ENUM('club','arena','stadium'), defaultValue: 'club' },
-    trial_ends_at:  { type: DataTypes.DATE, defaultValue: null },
-    is_active:      { type: DataTypes.BOOLEAN, defaultValue: true },
     savedAlbumsVisibility: {
     type: DataTypes.BOOLEAN,
     defaultValue: true
-}
+},
+  subscription_plan:   { type: DataTypes.ENUM('monthly', 'annual'), allowNull: true, defaultValue: null },
+  trial_ends_at:       { type: DataTypes.DATE, defaultValue: null },
+  subscription_ends_at:{ type: DataTypes.DATE, defaultValue: null },
+  is_on_trial:         { type: DataTypes.BOOLEAN, defaultValue: false },
+  is_active:      { type: DataTypes.BOOLEAN, defaultValue: true },
   });
 
   module.exports = user;

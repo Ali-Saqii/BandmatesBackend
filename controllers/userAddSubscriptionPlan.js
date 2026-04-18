@@ -129,7 +129,7 @@ const selectPlan = async (req,res) => {
     }
 }
 // cance plan
-exports.cancelPlan = async (req, res) => {
+const cancelPlan = async (req, res) => {
   try {
     const userId = req.user.id;
     const user = await User.findByPk(userId);
@@ -159,5 +159,6 @@ exports.cancelPlan = async (req, res) => {
   }
 };
 module.exports  = {
-    selectPlan
+    selectPlan,
+    cancelPlan
 }

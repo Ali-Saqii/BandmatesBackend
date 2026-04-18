@@ -12,6 +12,10 @@ const user =  sequelize.define('User', {
     membership:     { type: DataTypes.ENUM('club','arena','stadium'), defaultValue: 'club' },
     trial_ends_at:  { type: DataTypes.DATE, defaultValue: null },
     is_active:      { type: DataTypes.BOOLEAN, defaultValue: true },
+    savedAlbumsVisibility: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+}
   });
 
   module.exports = user;

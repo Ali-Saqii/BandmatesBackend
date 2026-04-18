@@ -6,6 +6,9 @@ console.log('Last.fm API Key:', process.env.LASTFM_API_KEY);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 
+const subscriptionRoutes = require("./routes/subscriptionRoutes");
+app.use("/api/subscription", subscriptionRoutes);
+
 const sequelize = require("./config/db");
 const models = require("./models");
 app.set("models", models);
@@ -17,9 +20,10 @@ const savedAlbumsRoutes = require("./routes/savedAlbumRoutes")
 const friendRoutes = require("./routes/friendsRoutes")
 const commentRoutes = require("./routes/commentRoute")
 const reviewRoute = require("./routes/reviewRoute")
-
+const subsCriptionRoutes = require("./routes/subscriptionRoutes")
 
 app.use("/user",authRoutes)
+app.use("/user",subsCriptionRoutes)
 app.use("/user",albumRoutes)
 app.use("/user",collerctionRoutes)
 app.use("/user",savedAlbumsRoutes)

@@ -2,7 +2,7 @@ const { User, SavedAlbum, Friend } = require("../models");
 const { Op } = require("sequelize");
 const validation = require("../validations/authValidation");
 const { object } = require("joi");
-
+const bcrypt = require("bcryptjs")
 const getUserProFile = async (req, res) => {
     try{
         const userId = req.user.id;
@@ -49,9 +49,9 @@ const getUserProFile = async (req, res) => {
         userId: user.id,      
         userProfileImage: user.avatar,
         userName: user.username,
-        userDisplayName: user.displayName,
-        email: user.email,
-        bio: user.description,
+        userDisplayName: user.displayName ?? "",
+        email: user.email ,
+        bio: user.description ?? "",
         noOfFriends: friendsCount,
         numberOfSavedAlbums: savedAlbumsCount,
         totalUsers
@@ -124,8 +124,6 @@ const updateUser = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const userId = req.user.id;
-
-    // 👤 check user exists
     const user = await User.findByPk(userId);
 
     if (!user) {
@@ -134,8 +132,6 @@ const deleteUser = async (req, res) => {
         message: "User not found"
       });
     }
-
-    // 🗑️ delete user
     await user.destroy();
 
     return res.status(200).json({
@@ -152,9 +148,109 @@ const deleteUser = async (req, res) => {
     });
   }
 };
+// update 
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required"
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password and confirm password do not match"
+      });
+    }
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Old password is incorrect"
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully"
+    });
+
+  } catch (error) {
+    console.error("🔥 Change Password Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+// hidden savedAlbums
+
+const updateSavedAlbumsVisibility = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { isPrivate } = req.body;
+
+    // ❌ validation
+    if (typeof isPrivate !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "isPrivate must be true or false"
+      });
+    }
+
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    user.isPrivate = isPrivate;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Privacy updated successfully",
+      isPrivate: user.isPrivate
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
 
 module.exports = {
     getUserProFile,
     updateUser,
-    deleteUser
+    deleteUser,
+    changePassword,
+    updateSavedAlbumsVisibility 
+
 }

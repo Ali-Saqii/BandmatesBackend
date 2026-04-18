@@ -43,7 +43,6 @@ const sendFriendRequest = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Friend request sent",
-      data: request
     });
 
   } catch (error) {

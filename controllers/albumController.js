@@ -217,6 +217,7 @@ const getTrendingAlbums = async (req, res) => {
         id: c.id,
         image: c.user?.avatar || "",
         name: c.user?.username || "Anonymous",
+        display_name: c.user?.displayName || "Anonymous", 
         commentText: c.text,
         commentTime: c.createdAt
       }));

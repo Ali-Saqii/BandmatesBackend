@@ -15,11 +15,13 @@ const albumRoutes = require("./routes/albumRoutes")
 const collerctionRoutes = require("./routes/collectionRoutes")
 const savedAlbumsRoutes = require("./routes/savedAlbumRoutes")
 const friendRoutes = require("./routes/friendsRoutes")
+const commentRoutes = require("./routes/commentsRoutes")
 app.use("/user",authRoutes)
 app.use("/user",albumRoutes)
 app.use("/user",collerctionRoutes)
 app.use("/user",savedAlbumsRoutes)
 app.use("/user",friendRoutes)
+app.use("/user",commentRoutes)
 async function init() {
   try {
     await sequelize.authenticate();

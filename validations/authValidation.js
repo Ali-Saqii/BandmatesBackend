@@ -80,7 +80,12 @@ const loginSchema = Joi.object({
       'any.required': 'Password is required'
     })
 });
-
+const updateUserSchema = Joi.object({
+  username: Joi.string().min(3).max(30).optional(),
+  displayName: Joi.string().min(2).max(50).optional(),
+  avatar: Joi.string().uri().allow(null, "").optional(),
+  description: Joi.string().max(300).allow(null, "").optional()
+});
 // VALIDATE HELPER FUNCTION
 const validate = (schema) => (req, res, next) => {
   const { error, value } = schema.validate(req.body, {
@@ -100,4 +105,4 @@ const validate = (schema) => (req, res, next) => {
   next();
 };
 
-module.exports = { signupSchema, loginSchema, validate };
+module.exports = { signupSchema, loginSchema, validate ,updateUserSchema};

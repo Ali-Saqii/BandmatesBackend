@@ -1,5 +1,5 @@
 const express = require("express")
-const router = express.router()
+const router = express.Router()
 const auth = require("../middleware/userAuth")
 const fControllers = require("../controllers/friendsController")
 

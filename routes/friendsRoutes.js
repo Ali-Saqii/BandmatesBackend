@@ -4,8 +4,8 @@ const auth = require("../middleware/userAuth")
 const fControllers = require("../controllers/friendsController")
 
 
-router.post("/friends/request", auth, sendFriendRequest);
-router.patch("/friends/accept/:requestId", auth, acceptFriendRequest);
-router.patch("/friends/reject/:requestId", auth, rejectFriendRequest);
+router.post("/friends/request", auth, fControllers.sendFriendRequest);
+router.patch("/friends/accept/:requestId", auth, fControllers.acceptFriendRequest);
+router.patch("/friends/reject/:requestId", auth, fControllers.rejectFriendRequest);
 
 module.exports = router;

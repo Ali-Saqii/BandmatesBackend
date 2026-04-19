@@ -16,5 +16,5 @@ router.post("/login", validate(loginSchema), login);
 router.get("/profile",auth,userController.getUserProFile)
 router.put("/update",auth,userController.updateUser)
 router.delete("/delete",auth,userController.deleteUser)
-router.put("/shangePassword", auth,userController.changePassword)
+router.put("/changePassword", auth,userController.changePassword)
 module.exports = router;

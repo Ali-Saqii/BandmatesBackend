@@ -27,8 +27,8 @@ const postComment = async (req, res) => {
       message: parent_id ? 'Reply posted successfully' : 'Comment posted successfully'
     });
     } catch(error) {
-    console.error(err);
-    res.status(500).json({ success: false, message: `${err.message}`});
+    console.error(error);
+    res.status(500).json({ success: false, message: `${error.message}`});
   }
 }
 

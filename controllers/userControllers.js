@@ -1,7 +1,7 @@
 const { User, SavedAlbum, Friend } = require("../models");
 const { Op } = require("sequelize");
 const validation = require("../validations/authValidation");
-const { object } = require("joi");
+const { Objectbject } = require("joi");
 const bcrypt = require("bcryptjs")
 const getUserProFile = async (req, res) => {
     try{
@@ -19,7 +19,9 @@ const getUserProFile = async (req, res) => {
                 "displayName",
                 "avatar",
                 "description",
-                "email"
+                "email",
+                "membership",
+                "is_on_trial",
             ]
         })
         if (!user) {
@@ -50,11 +52,13 @@ const getUserProFile = async (req, res) => {
         userProfileImage: user.avatar,
         userName: user.username,
         userDisplayName: user.displayName ?? "",
-        email: user.email ,
         bio: user.description ?? "",
+        totalUsers,
         noOfFriends: friendsCount,
         numberOfSavedAlbums: savedAlbumsCount,
-        totalUsers
+        email: user.email ,
+        userMembeShip: user.membership,
+        isOnTrial: user.is_on_trial,
       }
         })
     } catch(error) {
@@ -84,7 +88,7 @@ const updateUser = async (req, res) => {
                 message: "user not found"
             })
         }
-        const hasUpdates = object.keys(value).some((key) => {
+        const hasUpdates = Object.keys(value).some((key) => {
             const val = value[key];
             return val != undefined && val !== "";
         });

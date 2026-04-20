@@ -17,4 +17,5 @@ router.get("/profile",auth,userController.getUserProFile)
 router.put("/update",auth,userController.updateUser)
 router.delete("/delete",auth,userController.deleteUser)
 router.put("/changePassword", auth,userController.changePassword)
+router.put("/hideCollection",auth, userController.updateSavedAlbumsVisibility)
 module.exports = router;

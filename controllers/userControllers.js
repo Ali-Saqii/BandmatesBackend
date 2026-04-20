@@ -26,7 +26,7 @@ const getUserProFile = async (req, res) => {
         })
         if (!user) {
             return res.status(404).json({
-                sucess: falsem,
+                success: false,
                 message: "user not found"
             })
         }
@@ -45,7 +45,7 @@ const getUserProFile = async (req, res) => {
         ])
 
         return res.status(200).json({
-            sucess: true,
+            success: true,
             message: "sucessfull fetch user",
             data: {
         userId: user.id,      
@@ -230,7 +230,7 @@ const updateSavedAlbumsVisibility = async (req, res) => {
       });
     }
 
-    user.isPrivate = isPrivate;
+    user.savedAlbumsVisibility = isPrivate;
     await user.save();
 
     return res.status(200).json({

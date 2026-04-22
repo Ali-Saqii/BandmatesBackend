@@ -11,12 +11,12 @@ const postReview = async (req, res) => {
       where: { user_id, album_id }
     });
 
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        message: 'You have already reviewed this album'
-      });
-    }
+    // if (existing) {
+    //   return res.status(409).json({
+    //     success: false,
+    //     message: 'You have already reviewed this album'
+    //   });
+    // }
 
     // ── Review save karo ─────────────────────────────────────
     await Review.create({

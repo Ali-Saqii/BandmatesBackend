@@ -7,7 +7,7 @@ const savedAlbum = async (req, res) => {
 
         if (!album_id || !collection_id) {
             return res.status(400).json({
-                sucess: false,
+                success: false,
                 message: "album and collection required!!!"
             })
         }
@@ -32,13 +32,13 @@ const savedAlbum = async (req, res) => {
             collection_id
         })
         return res.status(201).json({
-            sucess: true,
+            success: true,
             message: "Album sucessfully saved✅"
         })
     }catch(error){
         console.error("Enternal server error:",error)
         return res.status(500).json({
-            sucess: false,
+            success: false,
             message: "Internal server error❗️"
         })
     }
@@ -51,7 +51,7 @@ const removeAlbum = async (req, res) => {
 
         if (!album_id || !collection_id) {
             return res.status(400).json({
-                sucess: false,
+                success: false,
                 message: "album and collection required!!!"
             })
         }
@@ -79,7 +79,7 @@ const removeAlbum = async (req, res) => {
     }catch(error){
          console.error("Enternal server error:",error)
         return res.status(500).json({
-            sucess: false,
+            success: false,
             message: "Internal server error❗️"
         })
     }

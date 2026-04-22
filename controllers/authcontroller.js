@@ -30,8 +30,8 @@ const signup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const avatar = req.file ? req.file.path : null;
-
+    // const avatar = req.file ? req.file.path : null;
+      const avatar = req.file ? `uploads/avatars/${req.file.filename}` : null;
     const newUser = await User.create({
       username:   username.trim(),
       email:      email.toLowerCase().trim(),

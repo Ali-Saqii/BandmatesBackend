@@ -9,6 +9,10 @@ app.use(express.urlencoded({ extended: true }));
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 app.use("/api/subscription", subscriptionRoutes);
 
+
+const path = require("path");
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 const sequelize = require("./config/db");
 const models = require("./models");
 app.set("models", models);

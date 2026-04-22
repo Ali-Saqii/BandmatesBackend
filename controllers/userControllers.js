@@ -47,19 +47,19 @@ const getUserProFile = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "sucessfull fetch user",
-            data: {
-        userId: user.id,      
-        userProfileImage: user.avatar,
-        userName: user.username,
-        userDisplayName: user.displayName ?? "",
-        bio: user.description ?? "",
-        totalUsers,
-        noOfFriends: friendsCount,
-        numberOfSavedAlbums: savedAlbumsCount,
-        email: user.email ,
-        userMembeShip: user.membership,
-        isOnTrial: user.is_on_trial,
-      }
+             data: {
+        id:               user.id,
+        profileImage:     user.avatar        ?? "",
+        fullName:         user.userName   ?? "",
+        userName:         user.displayName      ?? "",
+        Bio:              user.description   ?? "",
+        waiting:          totalUsers,
+        totalBandmates:   friendsCount,
+        toralSavedAlbums: savedAlbumsCount,
+        email:            user.email         ?? "",
+        subscriptionPlan: user.membership    ?? "club",
+        isOnTrial:        user.is_on_trial   ?? false,
+    }
         })
     } catch(error) {
         console.error("internal server error: ",error)
@@ -88,16 +88,18 @@ const updateUser = async (req, res) => {
                 message: "user not found"
             })
         }
+                const avatar = req.file ? `uploads/avatars/${req.file.filename}` : undefined;
+
         const hasUpdates = Object.keys(value).some((key) => {
             const val = value[key];
             return val != undefined && val !== "";
-        });
+        }) || avatar !== undefined ;
 
         if (!hasUpdates){
             return res.status(200).json({
                success: true,
                message: "No changes made",
-             })
+             }) 
         }
           if (value.username !== undefined && value.username !== "")
       user.username = value.username;
@@ -106,7 +108,7 @@ const updateUser = async (req, res) => {
       user.displayName = value.displayName;
 
     if (value.avatar !== undefined)
-      user.avatar = value.avatar || null;
+     user.avatar = avatar; 
 
     if (value.description !== undefined)
       user.description = value.description;

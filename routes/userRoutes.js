@@ -18,4 +18,6 @@ router.put("/update",auth,userController.updateUser)
 router.delete("/delete",auth,userController.deleteUser)
 router.put("/changePassword", auth,userController.changePassword)
 router.put("/hideCollection",auth, userController.updateSavedAlbumsVisibility)
+router.get("/getUsers",auth,userController.getAllUsers)
+router.get("/getUser/friends/:id",auth,userController.getAllUsers)
 module.exports = router;

@@ -1,4 +1,4 @@
-const { User, SavedAlbum, Friend } = require("../models");
+const { User, SavedAlbum, Album, Friend } = require("../models");
 const { Op } = require("sequelize");
 const validation = require("../validations/authValidation");
 const { Objectbject } = require("joi");
@@ -251,12 +251,239 @@ const updateSavedAlbumsVisibility = async (req, res) => {
   }
 };
 
+// get users
+const getAllUsers = async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { rows: users, count: totalUsers } = await User.findAndCountAll({
+      attributes: ["id", "username","displayName", "avatar", "description"],
+      limit,
+      offset,
+      order: [["createdAt", "DESC"]]
+    });
+
+    const result = await Promise.all(
+      users.map(async (user) => {
+
+        const [savedAlbumsCount, friendsCount] = await Promise.all([
+          SavedAlbum.count({ where: { user_id: user.id } }),
+
+          Friend.count({
+            where: {
+              status: "accepted",
+              [Op.or]: [
+                { sender_id: user.id },
+                { receiver_id: user.id }
+              ]
+            }
+          })
+        ]);
+        const relation = await Friend.findOne({
+          where: {
+            [Op.or]: [
+              { sender_id: currentUserId, receiver_id: user.id },
+              { sender_id: user.id, receiver_id: currentUserId }
+            ]
+          }
+        });
+
+        let isRequested = false;
+        let aretheyRequested = false;
+        let isFriend = false;
+
+        if (relation) {
+          if (relation.status === "accepted") {
+            isFriend = true;
+          } else if (relation.status === "pending") {
+            if (relation.sender_id === currentUserId) {
+              isRequested = true;
+            } else {
+              aretheyRequested = true;
+            }
+          }
+        }
+
+        return {
+          id: user.id,
+          image: user.avatar || "",
+          fullName: user.username,
+          userName: user.displayName || "",
+          Bio: user.description || "",
+
+          bandmates: friendsCount,
+          collections: savedAlbumsCount,
+
+          isRequested,
+          aretheyRequested,
+          isFriend
+        };
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+
+      pagination: {
+        totalItems: totalUsers,
+        currentPage: page,
+        totalPages: Math.ceil(totalUsers / limit),
+        perPage: limit
+      }
+    });
+
+  } catch (error) {
+    console.error("🔥 Get All Users Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+// get user's bandmates
+
+const getUserBandmates = async (req, res) => {
+  try {
+    const currentUserId = req.user.id;
+    const targetUserId = req.params.id;
+
+    // ✅ pagination
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 10);
+    const offset = (page - 1) * limit;
+
+    // ✅ ONLY target user's accepted friends
+    const { rows: friendships, count } = await Friend.findAndCountAll({
+      where: {
+        status: "accepted",
+        [Op.or]: [
+          { sender_id: targetUserId },
+          { receiver_id: targetUserId }
+        ]
+      },
+      limit,
+      offset
+    });
+
+    //  extract ONLY friend IDs (not all users)
+    const friendIds = friendships.map(f =>
+      f.sender_id === targetUserId ? f.receiver_id : f.sender_id
+    );
+
+    // if no friends
+    if (friendIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          totalItems: 0,
+          currentPage: page,
+          totalPages: 0,
+          perPage: limit
+        }
+      });
+    }
+
+    // ✅ fetch ONLY those users
+    const users = await User.findAll({
+      where: { id: friendIds },
+      attributes: ["id", "username", "displayName","avatar", "description"]
+    });
+
+    // map for quick lookup
+    const userMap = {};
+    users.forEach(u => userMap[u.id] = u);
+
+    const result = await Promise.all(friendIds.map(async (id) => {
+      const user = userMap[id];
+      if (!user) return null;
+
+      // counts
+      const [savedAlbumsCount, friendsCount] = await Promise.all([
+        SavedAlbum.count({ where: { user_id: id } }),
+
+        Friend.count({
+          where: {
+            status: "accepted",
+            [Op.or]: [
+              { sender_id: id },
+              { receiver_id: id }
+            ]
+          }
+        })
+      ]);
+
+      // relation with CURRENT user
+      const relation = await Friend.findOne({
+        where: {
+          [Op.or]: [
+            { sender_id: currentUserId, receiver_id: id },
+            { sender_id: id, receiver_id: currentUserId }
+          ]
+        }
+      });
+
+      let isRequested = false;
+      let aretheyRequested = false;
+      let isFriend = false;
+
+      if (relation) {
+        if (relation.status === "accepted") isFriend = true;
+        else if (relation.status === "pending") {
+          if (relation.sender_id === currentUserId) isRequested = true;
+          else aretheyRequested = true;
+        }
+      }
+
+      return {
+        id: user.id,
+        image: user.avatar || "",
+        fullName: user.username,
+        userName: user.displayName || "",
+        Bio: user.description || "",
+
+        bandmates: friendsCount,
+        collections: savedAlbumsCount,
+
+        isRequested,
+        aretheyRequested,
+        isFriend
+      };
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: result.filter(Boolean),
+      pagination: {
+        totalItems: count,
+        currentPage: page,
+        totalPages: Math.ceil(count / limit),
+        perPage: limit
+      }
+    });
+
+  } catch (error) {
+    console.error("🔥 Get Targeted Bandmates Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
 module.exports = {
     getUserProFile,
     updateUser,
     deleteUser,
     changePassword,
-    updateSavedAlbumsVisibility 
-
+    updateSavedAlbumsVisibility,
+    getAllUsers,
+    getUserBandmates 
 }

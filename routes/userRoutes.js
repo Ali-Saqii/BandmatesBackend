@@ -19,5 +19,5 @@ router.delete("/delete",auth,userController.deleteUser)
 router.put("/changePassword", auth,userController.changePassword)
 router.put("/hideCollection",auth, userController.updateSavedAlbumsVisibility)
 router.get("/getUsers",auth,userController.getAllUsers)
-router.get("/getUser/friends/:id",auth,userController.getAllUsers)
+router.get("/getUser/friends/:id",auth,userController.getUserBandmates)
 module.exports = router;

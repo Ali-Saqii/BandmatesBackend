@@ -1,5 +1,5 @@
 const { User, SavedAlbum, Album, Friend } = require("../models");
-const { Op } = require("sequelize");
+const { Op, fn, col } = require("sequelize");
 const validation = require("../validations/authValidation");
 const { Objectbject } = require("joi");
 const bcrypt = require("bcryptjs")
@@ -351,15 +351,15 @@ const getAllUsers = async (req, res) => {
 
 const getUserBandmates = async (req, res) => {
   try {
-    const currentUserId = req.user.id;
-    const targetUserId = req.params.id;
+    const currentUserId = String(req.user.id);
+    const targetUserId = String(req.params.id);
 
     // ✅ pagination
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, parseInt(req.query.limit) || 10);
     const offset = (page - 1) * limit;
 
-    // ✅ ONLY target user's accepted friends
+    // ✅ get ONLY friendships of target user
     const { rows: friendships, count } = await Friend.findAndCountAll({
       where: {
         status: "accepted",
@@ -368,16 +368,23 @@ const getUserBandmates = async (req, res) => {
           { receiver_id: targetUserId }
         ]
       },
+      attributes: ["sender_id", "receiver_id"],
       limit,
       offset
     });
 
-    //  extract ONLY friend IDs (not all users)
-    const friendIds = friendships.map(f =>
-      f.sender_id === targetUserId ? f.receiver_id : f.sender_id
-    );
+    // ✅ extract friend IDs safely
+    const friendIds = [
+      ...new Set(
+        friendships.map(f => {
+          const sender = String(f.sender_id);
+          const receiver = String(f.receiver_id);
+          return sender === targetUserId ? receiver : sender;
+        })
+      )
+    ];
 
-    // if no friends
+    // 🛑 no friends
     if (friendIds.length === 0) {
       return res.status(200).json({
         success: true,
@@ -391,44 +398,87 @@ const getUserBandmates = async (req, res) => {
       });
     }
 
-    // ✅ fetch ONLY those users
+    // ✅ fetch users in ONE query
     const users = await User.findAll({
-      where: { id: friendIds },
-      attributes: ["id", "username", "displayName","avatar", "description"]
+      where: {
+        id: {
+          [Op.in]: friendIds
+        }
+      },
+      attributes: ["id", "username", "displayName", "avatar", "description"]
     });
 
-    // map for quick lookup
-    const userMap = {};
-    users.forEach(u => userMap[u.id] = u);
-
-    const result = await Promise.all(friendIds.map(async (id) => {
-      const user = userMap[id];
-      if (!user) return null;
-
-      // counts
-      const [savedAlbumsCount, friendsCount] = await Promise.all([
-        SavedAlbum.count({ where: { user_id: id } }),
-
-        Friend.count({
-          where: {
-            status: "accepted",
-            [Op.or]: [
-              { sender_id: id },
-              { receiver_id: id }
-            ]
-          }
-        })
-      ]);
-
-      // relation with CURRENT user
-      const relation = await Friend.findOne({
-        where: {
-          [Op.or]: [
-            { sender_id: currentUserId, receiver_id: id },
-            { sender_id: id, receiver_id: currentUserId }
-          ]
+    // ✅ get counts in bulk (NO N+1)
+    const savedCounts = await SavedAlbum.findAll({
+      attributes: ["user_id", [fn("COUNT", col("id")), "count"]],
+      where: {
+        user_id: {
+          [Op.in]: friendIds
         }
-      });
+      },
+      group: ["user_id"]
+    });
+
+    const friendCounts = await Friend.findAll({
+      attributes: [
+        [fn("IFNULL", col("sender_id"), col("receiver_id")), "user_id"],
+        [fn("COUNT", col("id")), "count"]
+      ],
+      where: {
+        status: "accepted",
+        [Op.or]: [
+          { sender_id: { [Op.in]: friendIds } },
+          { receiver_id: { [Op.in]: friendIds } }
+        ]
+      },
+      group: ["sender_id", "receiver_id"]
+    });
+
+    // convert counts to maps
+    const savedMap = {};
+    savedCounts.forEach(c => {
+      savedMap[c.user_id] = parseInt(c.get("count"));
+    });
+
+    const friendMap = {};
+    friendCounts.forEach(f => {
+      const sender = String(f.sender_id);
+      const receiver = String(f.receiver_id);
+
+      friendMap[sender] = (friendMap[sender] || 0) + 1;
+      friendMap[receiver] = (friendMap[receiver] || 0) + 1;
+    });
+
+    // ✅ relations with CURRENT user (bulk)
+    const relations = await Friend.findAll({
+      where: {
+        [Op.or]: [
+          {
+            sender_id: currentUserId,
+            receiver_id: { [Op.in]: friendIds }
+          },
+          {
+            sender_id: { [Op.in]: friendIds },
+            receiver_id: currentUserId
+          }
+        ]
+      }
+    });
+
+    const relationMap = {};
+    relations.forEach(r => {
+      const otherId =
+        String(r.sender_id) === currentUserId
+          ? String(r.receiver_id)
+          : String(r.sender_id);
+
+      relationMap[otherId] = r;
+    });
+
+    // ✅ final result
+    const result = users.map(user => {
+      const id = String(user.id);
+      const relation = relationMap[id];
 
       let isRequested = false;
       let aretheyRequested = false;
@@ -437,30 +487,33 @@ const getUserBandmates = async (req, res) => {
       if (relation) {
         if (relation.status === "accepted") isFriend = true;
         else if (relation.status === "pending") {
-          if (relation.sender_id === currentUserId) isRequested = true;
-          else aretheyRequested = true;
+          if (String(relation.sender_id) === currentUserId) {
+            isRequested = true;
+          } else {
+            aretheyRequested = true;
+          }
         }
       }
 
       return {
-        id: user.id,
+        id,
         image: user.avatar || "",
         fullName: user.username,
         userName: user.displayName || "",
         Bio: user.description || "",
 
-        bandmates: friendsCount,
-        collections: savedAlbumsCount,
+        bandmates: friendMap[id] || 0,
+        collections: savedMap[id] || 0,
 
         isRequested,
         aretheyRequested,
         isFriend
       };
-    }));
+    });
 
     return res.status(200).json({
       success: true,
-      data: result.filter(Boolean),
+      data: result,
       pagination: {
         totalItems: count,
         currentPage: page,

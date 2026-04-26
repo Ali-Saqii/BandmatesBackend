@@ -10,11 +10,14 @@ const userController = require("../controllers/userControllers")
 
 
 
-const upload = multer({ dest: "uploads/avatars/" });
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
 router.post("/signup", upload.single("avatar"), validate(signupSchema), signup);
 router.post("/login", validate(loginSchema), login);
 router.get("/profile",auth,userController.getUserProFile)
-router.put("/update",auth,userController.updateUser)
+router.put("/update", auth, upload.single("avatar"), userController.updateUser);
 router.delete("/delete",auth,userController.deleteUser)
 router.put("/changePassword", auth,userController.changePassword)
 router.put("/hideCollection",auth, userController.updateSavedAlbumsVisibility)

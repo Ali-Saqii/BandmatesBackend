@@ -192,7 +192,7 @@ const getUserSavedAlbums = async (req, res) => {
         albumArtistName: album.artist,
 
         // ✅ FIXED (no release_date column)
-        releaseDate: album.createdAt,
+        releaseDate: album.createdAt || "",
 
         averageRating,
         totalRatingCount: reviews.length,

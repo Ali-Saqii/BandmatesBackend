@@ -64,12 +64,11 @@ const acceptFriendRequest = async (req, res) => {
 
     const request = await Friend.findOne({
       where: {
-        id: requestId,
+        sender_id: requestId,
         receiver_id: userId,
         status: "pending"
       }
     });
-
     if (!request) {
       return res.status(404).json({
         success: false,

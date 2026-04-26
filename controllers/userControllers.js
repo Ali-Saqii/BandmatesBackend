@@ -3,6 +3,9 @@ const { Op, fn, col } = require("sequelize");
 const validation = require("../validations/authValidation");
 const { Objectbject } = require("joi");
 const bcrypt = require("bcryptjs")
+
+
+
 const getUserProFile = async (req, res) => {
     try{
         const userId = req.user.id;
@@ -24,6 +27,7 @@ const getUserProFile = async (req, res) => {
                 "is_on_trial",
             ]
         })
+        console.log("🔍 user.avatar:", user.avatar);
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -49,9 +53,9 @@ const getUserProFile = async (req, res) => {
             message: "sucessfull fetch user",
              data: {
         id:               user.id,
-        profileImage:     user.avatar        ?? "",
-        fullName:         user.userName   ?? "",
-        userName:         user.displayName      ?? "",
+        profileImage:     user.avatar ,
+        fullName:         user.username  ,
+        userName:         user.displayName     || "",
         Bio:              user.description   ?? "",
         waiting:          totalUsers,
         totalBandmates:   friendsCount,
@@ -72,61 +76,66 @@ const getUserProFile = async (req, res) => {
 // update user
 
 const updateUser = async (req, res) => {
-    try{
-        const { error, value } = validation.updateUserSchema.validate(req.body);
-        if(error) {
-            return res.status(400).json({
-                sucess: false,
-                message: `${error.message}`
-            })
-        }
+  try {
+    const fs = require('fs');
+    
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "user not found"
+      });
+    }
 
-        const user = await User.findByPk(req.user.id)
-        if (!user) {
-            return res.status(404).json({
-                sucess: false,
-                message: "user not found"
-            })
-        }
-                const avatar = req.file ? `uploads/avatars/${req.file.filename}` : undefined;
+    // ✅ Text fields — sirf update karo jo aaya ho
+    if (req.body.username && req.body.username !== "") {
+      user.username = req.body.username;
+    }
 
-        const hasUpdates = Object.keys(value).some((key) => {
-            const val = value[key];
-            return val != undefined && val !== "";
-        }) || avatar !== undefined ;
+    if (req.body.displayName && req.body.displayName !== "") {
+      user.displayName = req.body.displayName;
+    }
 
-        if (!hasUpdates){
-            return res.status(200).json({
-               success: true,
-               message: "No changes made",
-             }) 
-        }
-          if (value.username !== undefined && value.username !== "")
-      user.username = value.username;
+    if (req.body.description !== undefined && req.body.description !== "") {
+      user.description = req.body.description;
+    }
 
-    if (value.displayName !== undefined && value.displayName !== "")
-      user.displayName = value.displayName;
+    if (req.body.email && req.body.email !== "") {
+      user.email = req.body.email;
+    }
 
-    if (value.avatar !== undefined)
-     user.avatar = avatar; 
+    // ✅ Image — buffer se save karo (memoryStorage use ho raha hai)
+    if (req.file && req.file.buffer) {
+      const filename = `${Date.now()}_${req.file.originalname}`;
+      const savePath = `uploads/avatars/${filename}`;
 
-    if (value.description !== undefined)
-      user.description = value.description;
+      // ✅ Folder exist na kare toh banao
+      if (!fs.existsSync('uploads/avatars')) {
+        fs.mkdirSync('uploads/avatars', { recursive: true });
+      }
+
+      fs.writeFileSync(savePath, req.file.buffer);
+      user.avatar = savePath;
+      
+      console.log("✅ Avatar saved:", savePath);
+    }
 
     await user.save();
+    console.log("✅ User saved — avatar:", user.avatar);
 
     return res.status(200).json({
       success: true,
       message: "Profile updated successfully"
     });
-    }catch(error){
-           console.error("internal server error: ",error)
-        return res.status(500).json({
-            sucess: false,
-            message: "internal server error"
-        })
-    }
-}
+
+  } catch (error) {
+    console.error("🔥 updateUser error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "internal server error"
+    });
+  }
+};
 const deleteUser = async (req, res) => {
   try {
     const userId = req.user.id;

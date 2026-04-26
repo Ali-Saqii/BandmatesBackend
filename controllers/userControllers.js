@@ -380,7 +380,7 @@ const getUserBandmates = async (req, res) => {
         [Op.or]: [
           { sender_id: targetUserId },
           { receiver_id: targetUserId }
-        ]
+        ]       
       },
       attributes: ["sender_id", "receiver_id"],
       limit,

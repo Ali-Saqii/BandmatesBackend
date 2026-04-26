@@ -262,6 +262,11 @@ const getAllUsers = async (req, res) => {
 
     const { rows: users, count: totalUsers } = await User.findAndCountAll({
       attributes: ["id", "username","displayName", "avatar", "description"],
+       where: {
+    id: {
+      [Op.ne]: currentUserId
+    }
+  },
       limit,
       offset,
       order: [["createdAt", "DESC"]]

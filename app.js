@@ -25,6 +25,7 @@ const friendRoutes = require("./routes/friendsRoutes")
 const commentRoutes = require("./routes/commentRoute")
 const reviewRoute = require("./routes/reviewRoute")
 const subsCriptionRoutes = require("./routes/subscriptionRoutes")
+const chartRoute = require("./routes/chartRoute")
 
 app.use("/user",authRoutes)
 app.use("/user",subsCriptionRoutes)
@@ -34,6 +35,7 @@ app.use("/user",savedAlbumsRoutes)
 app.use("/user",friendRoutes)
 app.use("/user",commentRoutes)
 app.use("/user",reviewRoute)
+app.use("/user",chartRoute)
 
 
 async function init() {

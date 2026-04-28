@@ -44,7 +44,7 @@ async function init() {
     await sequelize.authenticate();
     console.log( "Database connected");
 
-    await sequelize.sync(); // ❗ no force:true
+    await sequelize.sync(); 
     console.log(" Tables synced");
   } catch (error) {
     console.error(" Startup failed:", error.message);

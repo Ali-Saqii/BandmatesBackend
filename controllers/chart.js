@@ -1,54 +1,71 @@
-// routes/ranking.js
-const express = require('express');
-const router  = express.Router();
-const { Album, Review } = require('../models');
+const { User } = require("../models");
+const sequelize = require("../config/db");
 
-router.get('/api/ranking', async (req, res) => {
+const getAlbumChart = async (req, res) => {
   try {
+    const userId = req.user.id;
+    console.log("Controller hit");
 
-    const albums = await Album.findAll({
-      include: [{
-        model: Review,
-        attributes: ['rating']   // sirf rating chahiye, baki nahi
-      }]
+    const user = await User.findByPk(userId, { attributes: ["membership"] });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const membership = user.membership || "club";
+
+    let limitClause = "";
+    if (membership === "club")       limitClause = "LIMIT 5";
+    else if (membership === "arena") limitClause = "LIMIT 25";
+    // stadium → no limit
+
+    const [albums] = await sequelize.query(`
+      SELECT
+        a.id         AS albumId,
+        a.cover      AS image,
+        a.name       AS albumName,
+        a.artist     AS albumArtist,
+        COALESCE(AVG(r.rating), 0)                             AS averageRating,
+        COALESCE(COUNT(r.id), 0)                               AS totalRatings,
+        SUM(CASE WHEN r.rating = 5 THEN 1 ELSE 0 END)         AS fiveStar,
+        SUM(CASE WHEN r.rating = 4 THEN 1 ELSE 0 END)         AS fourStar,
+        SUM(CASE WHEN r.rating = 3 THEN 1 ELSE 0 END)         AS threeStar,
+        SUM(CASE WHEN r.rating = 2 THEN 1 ELSE 0 END)         AS twoStar,
+        SUM(CASE WHEN r.rating = 1 THEN 1 ELSE 0 END)         AS oneStar
+      FROM Albums a
+      LEFT JOIN Reviews r ON r.album_id = a.id
+      GROUP BY a.id, a.cover, a.name, a.artist
+      ORDER BY averageRating DESC
+      ${limitClause}
+    `);
+
+    const result = albums.map((a) => ({
+      albumId:       a.albumId,
+      image:         a.image,
+      albumName:     a.albumName,
+      albumArtist:   a.albumArtist,
+      averageRating: parseFloat(a.averageRating || 0).toFixed(1),
+      ratings: {
+        fiveStar:  parseInt(a.fiveStar)  || 0,
+        fourStar:  parseInt(a.fourStar)  || 0,
+        threeStar: parseInt(a.threeStar) || 0,
+        twoStar:   parseInt(a.twoStar)   || 0,
+        oneStar:   parseInt(a.oneStar)   || 0,
+      },
+    }));
+
+    console.log("Result count:", result.length);
+
+    return res.status(200).json({
+      success: true,
+      message: "Successfully fetched",
+      count:   result.length,
+      data:    result,
     });
 
-    const rankingData = albums
-      .map(album => {
-        const reviews = album.Reviews || [];
-        if (reviews.length === 0) return null;
-
-        // Distribution [1★, 2★, 3★, 4★, 5★]
-        const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        reviews.forEach(r => {
-          const star = Math.min(5, Math.max(1, Math.round(parseFloat(r.rating))));
-          dist[star]++;
-        });
-
-        const sum = reviews.reduce((acc, r) => acc + parseFloat(r.rating), 0);
-        const avg = (sum / reviews.length).toFixed(1);
-
-        return {
-          id:                  album.id,       // UUID — aapka album_id
-          mbid:                album.mbid,
-          name:                album.name,
-          artist:              album.artist,
-          cover:               album.cover,
-          year:                album.year,
-          avg_rating:          parseFloat(avg),
-          total_reviews:       reviews.length,
-          rating_distribution: [dist[1], dist[2], dist[3], dist[4], dist[5]]
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.avg_rating - a.avg_rating);
-
-    res.json({ success: true, data: rankingData });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+  } catch (error) {
+    console.error("🔥 getAlbumsByMembership error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
-});
+};
 
-module.exports = router;
+module.exports = { getAlbumChart };

@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const Notification = require("../models/Notification");
+const Notification = require("../models/notificationModel");
 
 // ─────────────────────────────────────────────
 //  HELPERS
@@ -312,7 +312,6 @@ module.exports = {
   createCommentNotification,
   createCollectionUpdateNotification,
 
-  // Route handlers
   getNotifications,
   getUnreadCount,
   markAsRead,

@@ -7,7 +7,10 @@ const { signupSchema, loginSchema }           = require("../validations/authVali
 const validate                                = require("../middleware/validate");
 const auth = require("../middleware/userAuth")
 const userController = require("../controllers/userControllers")
+const { forgotPassword, resetPassword } = require('../controllers/resetPasswordController');
 
+router.post('/auth/forgot-password', forgotPassword);
+router.get('/auth/reset-password', resetPassword);
 
 
 const upload = multer({

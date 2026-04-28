@@ -12,9 +12,8 @@ const savedAlbum = async (req, res) => {
             })
         }
 
-        // check duplicate 
-        const existing = await SavedAlbums.findOne({
-            where:{
+        const existing = await SavedAlbum.findOne({  
+            where: {
                 user_id: userId,
                 album_id,
                 collection_id
@@ -22,15 +21,17 @@ const savedAlbum = async (req, res) => {
         })
         if (existing) {
             return res.status(409).json({
-                sucess: false,
+                success: false,                        
                 message: "Album already saved in this collection"
             })
         }
-        const saved = await SavedAlbums.create({
+
+        const saved = await SavedAlbum.create({        
             user_id: userId,
             album_id,
             collection_id
         })
+
         return res.status(201).json({
             success: true,
             message: "Album sucessfully saved✅"

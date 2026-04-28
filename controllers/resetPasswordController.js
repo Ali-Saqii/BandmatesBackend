@@ -44,7 +44,7 @@ const forgotPassword = async (req, res) => {
 
   await user.update({ resetToken: token, resetTokenExpiry: expiry });
 
-  const resetLink = `http://YOUR_LOCAL_IP:3000/auth/reset-password?token=${token}`;
+  const resetLink = `http://localhost:3000/auth/reset-password?token=${token}`;
 
   await transporter.sendMail({
     from: 'youremail@gmail.com',
@@ -67,7 +67,7 @@ const resetPassword = async (req, res) => {
   const user = await User.findOne({
     where: {
       resetToken: token,
-      resetTokenExpiry: { [Op.gt]: new Date() }  // ← this was broken in your paste
+      resetTokenExpiry: { [Op.gt]: new Date() }  
     }
   });
 

@@ -31,7 +31,7 @@ const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     // const avatar = req.file ? req.file.path : null;
-      const avatar = req.file ? `uploads/avatars/${req.file.filename}` : null;
+    const avatar = req.file ? `uploads/avatars/${req.file.filename}` : null;
     const newUser = await User.create({
       username:   username.trim(),
       email:      email.toLowerCase().trim(),
@@ -40,25 +40,21 @@ const signup = async (req, res) => {
       membership: 'club',
       is_active:  true
     });
-
     const token = jwt.sign(
       { id: newUser.id, email: newUser.email, membership: newUser.membership },
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
-
     res.status(201).json({
       success: true,
       message: 'Account created successfully',
       token: token
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Internal server error'});
   }
 };
-
 const login = async (req, res) => {
   try {
     const { email, password } = req.validatedBody;
@@ -84,7 +80,7 @@ const login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message:"In correct password",
+        message:"Incorrect password",
         errors: { password: 'Incorrect password' }
       });
     }

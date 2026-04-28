@@ -147,6 +147,8 @@ const deleteUser = async (req, res) => {
         message: "User not found"
       });
     }
+    await SavedAlbum.destroy({ where: { user_id: user.id } });
+
     await user.destroy();
 
     return res.status(200).json({

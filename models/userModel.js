@@ -19,6 +19,16 @@ const user =  sequelize.define('User', {
   subscription_ends_at:{ type: DataTypes.DATE, defaultValue: null },
   is_on_trial:         { type: DataTypes.BOOLEAN, defaultValue: false },
   is_active:      { type: DataTypes.BOOLEAN, defaultValue: true },
+  resetToken: {
+  type: DataTypes.STRING,
+  allowNull: true,
+  defaultValue: null,
+},
+resetTokenExpiry: {
+  type: DataTypes.DATE,
+  allowNull: true,
+  defaultValue: null,
+}
   });
 
   module.exports = user;

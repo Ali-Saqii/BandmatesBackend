@@ -53,7 +53,7 @@ const getUserProFile = async (req, res) => {
             message: "sucessfull fetch user",
              data: {
         id:               user.id,
-        profileImage:     user.avatar ,
+        profileImage:     user.avatar ?? "" ,
         fullName:         user.username  ,
         userName:         user.displayName     || "",
         Bio:              user.description   ?? "",
@@ -87,7 +87,6 @@ const updateUser = async (req, res) => {
       });
     }
 
-    // ✅ Text fields — sirf update karo jo aaya ho
     if (req.body.username && req.body.username !== "") {
       user.username = req.body.username;
     }
@@ -104,12 +103,10 @@ const updateUser = async (req, res) => {
       user.email = req.body.email;
     }
 
-    // ✅ Image — buffer se save karo (memoryStorage use ho raha hai)
     if (req.file && req.file.buffer) {
       const filename = `${Date.now()}_${req.file.originalname}`;
       const savePath = `uploads/avatars/${filename}`;
 
-      // ✅ Folder exist na kare toh banao
       if (!fs.existsSync('uploads/avatars')) {
         fs.mkdirSync('uploads/avatars', { recursive: true });
       }
@@ -117,17 +114,12 @@ const updateUser = async (req, res) => {
       fs.writeFileSync(savePath, req.file.buffer);
       user.avatar = savePath;
       
-      console.log("✅ Avatar saved:", savePath);
     }
-
     await user.save();
-    console.log("✅ User saved — avatar:", user.avatar);
-
     return res.status(200).json({
       success: true,
       message: "Profile updated successfully"
     });
-
   } catch (error) {
     console.error("🔥 updateUser error:", error);
     return res.status(500).json({
@@ -177,7 +169,7 @@ const changePassword = async (req, res) => {
         message: "All fields are required"
       });
     }
-
+console.log(`oldPassword: ${oldPassword}/n newPassword: ${newPassword}/n confirmPassword: ${confirmPassword}`)
     if (newPassword !== confirmPassword) {
       return res.status(400).json({
         success: false,
@@ -226,14 +218,12 @@ const updateSavedAlbumsVisibility = async (req, res) => {
     const userId = req.user.id;
     const { isPrivate } = req.body;
 
-    // ❌ validation
     if (typeof isPrivate !== "boolean") {
       return res.status(400).json({
         success: false,
         message: "isPrivate must be true or false"
       });
     }
-
     const user = await User.findByPk(userId);
 
     if (!user) {

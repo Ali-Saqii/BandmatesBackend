@@ -8,6 +8,7 @@ const validate                                = require("../middleware/validate"
 const auth = require("../middleware/userAuth")
 const userController = require("../controllers/userControllers")
 const { forgotPassword, resetPassword } = require('../controllers/resetPasswordController');
+const { sendFeedback } = require('../controllers/feedBackController');
 
 router.post('/auth/forgot-password', forgotPassword);
 router.get('/auth/reset-password', resetPassword);
@@ -26,4 +27,6 @@ router.put("/changePassword", auth,userController.changePassword)
 router.put("/hideCollection",auth, userController.updateSavedAlbumsVisibility)
 router.get("/getUsers",auth,userController.getAllUsers)
 router.get("/getUser/friends/:id",auth,userController.getUserBandmates)
+router.post('/feedback', auth, sendFeedback);
+
 module.exports = router;

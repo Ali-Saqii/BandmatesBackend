@@ -1,8 +1,8 @@
-// controllers/authController.js
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const { Op } = require('sequelize');
 const { User } = require('../models');
+const fs     = require('fs'); 
 
 const signup = async (req, res) => {
   try {
@@ -31,8 +31,22 @@ const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     // const avatar = req.file ? req.file.path : null;
-    const avatar = req.file ? `uploads/avatars/${req.file.filename}` : null;
-    const newUser = await User.create({
+let avatar = null;
+if (req.file && req.file.buffer) {
+  const filename = `${Date.now()}_${req.file.originalname}`;
+  const savePath = `uploads/avatars/${filename}`;
+
+  if (!fs.existsSync('uploads/avatars')) {
+    fs.mkdirSync('uploads/avatars', { recursive: true });
+  }
+
+  fs.writeFileSync(savePath, req.file.buffer);
+  avatar = savePath;
+  console.log("✅ Avatar saved:", avatar);
+} else {
+  console.log("❌ No file received");
+}   
+ const newUser = await User.create({
       username:   username.trim(),
       email:      email.toLowerCase().trim(),
       password:   hashedPassword,
@@ -58,7 +72,10 @@ const signup = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.validatedBody;
-
+ console.log('📧 Email:', email);
+    console.log('🔑 Password received:', password); // ← what does this print?
+    console.log('📦 req.body:', req.body);           // ← compare with this
+    console.log('📦 req.validatedBody:', req.validatedBody);
     const user = await User.findOne({ where: { email } });
 
     if (!user) {

@@ -1,4 +1,5 @@
 const { Friend } = require("../models");
+const { createBandmateRequestNotification, createBandmateAcceptedNotification } = require("../controllers/notificationController")
 const { Op } = require("sequelize");
 
 const sendFriendRequest = async (req, res) => {
@@ -34,11 +35,19 @@ const sendFriendRequest = async (req, res) => {
         message: "Friend request already exists or user is already connected"
       });
     }
+  
     const request = await Friend.create({
       sender_id: senderId,
       receiver_id,
       status: "pending"
     });
+     const sender = await User.findByPk(senderId, { attributes: ['username'] });
+
+    await createBandmateRequestNotification(
+      receiver_id,          
+      senderId,
+      sender?.username || 'Someone'
+    );
 
     return res.status(201).json({
       success: true,
@@ -79,6 +88,14 @@ const acceptFriendRequest = async (req, res) => {
     // ✅ accept
     request.status = "accepted";
     await request.save();
+
+    const acceptor = await User.findByPk(userId, { attributes: ['username'] });
+
+    await createBandmateAcceptedNotification(
+      request.sender_id,          // notify the one who sent request
+      userId,                     // acceptor id
+      acceptor?.username || 'Someone'
+    );
 
     return res.status(200).json({
       success: true,

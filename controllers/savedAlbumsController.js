@@ -56,10 +56,12 @@ const removeAlbum = async (req, res) => {
                 message: "album and collection required!!!"
             })
         }
-        const record  = await SavedAlbums.findOne({
-            user_id: userId,
-            album_id,
-            collection_id
+        const record  = await SavedAlbum.findOne({
+             where: {
+        user_id: userId,
+        album_id,
+        collection_id
+    }
 
         })
 

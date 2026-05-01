@@ -43,13 +43,23 @@ const createSystemAnnouncement = async (userIds, title, body) => {
  * @param {string} senderName  - display name of sender
  */
 const createBandmateRequestNotification = async (receiverId, senderId, senderName) => {
-  return Notification.create({
-    user_id:   receiverId,
-    type:      "bandmate_activity",
-    title:     "New Bandmate Request",
-    body:      `${senderName} has sent you a bandmate request.`,
-    sender_id: senderId,
-  });
+  try { // ← try/catch nahi tha pehle
+    console.log('📨 Creating notification:', { receiverId, senderId, senderName });
+    
+    const result = await Notification.create({
+      user_id:   receiverId,
+      type:      "bandmate_activity",
+      title:     "New Bandmate Request",
+      body:      `${senderName} has sent you a bandmate request.`,
+      sender_id: senderId,
+    });
+    
+    console.log('✅ Notification saved:', result.id);
+    return result;
+  } catch (err) {
+    console.error('🔥 Notification create failed:', err.message); // ← exact error dikhega
+    throw err;
+  }
 };
 
 /**

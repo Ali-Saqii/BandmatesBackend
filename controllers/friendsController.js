@@ -1,4 +1,4 @@
-const { Friend } = require("../models");
+const { Friend, User } = require("../models");
 const { createBandmateRequestNotification, createBandmateAcceptedNotification } = require("../controllers/notificationController")
 const { Op } = require("sequelize");
 
@@ -23,7 +23,7 @@ const sendFriendRequest = async (req, res) => {
     const existingRequest = await Friend.findOne({
       where: {
         [Op.or]: [
-          { sender_id: senderId, receiver_id },
+          { sender_id: senderId, receiver_id:receiver_id },
           { sender_id: receiver_id, receiver_id: senderId }
         ]
       }
@@ -41,13 +41,19 @@ const sendFriendRequest = async (req, res) => {
       receiver_id,
       status: "pending"
     });
-     const sender = await User.findByPk(senderId, { attributes: ['username'] });
-
-    await createBandmateRequestNotification(
-      receiver_id,          
-      senderId,
-      sender?.username || 'Someone'
-    );
+        try {
+        const sender = await User.findByPk(senderId, { attributes: ['username'] });
+        console.log('👤 Sender:', sender?.username);
+        
+        await createBandmateRequestNotification(
+          receiver_id,
+          senderId,
+          sender?.username || 'Someone'
+        );
+        console.log('✅ Notification done');
+      } catch (notifErr) {
+        console.error('🔥 Notification error:', notifErr.message); // ← yahan error ayega
+      }
 
     return res.status(201).json({
       success: true,
@@ -115,17 +121,20 @@ const acceptFriendRequest = async (req, res) => {
 // reject friend request
 const rejectFriendRequest = async (req, res) => {
   try {
+    console.log("Controller Hit")
     const userId = req.user.id; // receiver
     const { requestId } = req.params;
+    console.log(`${userId}\n${requestId}`)
+
 
     const request = await Friend.findOne({
       where: {
-        id: requestId,
+        sender_id: requestId,
         receiver_id: userId,
         status: "pending"
       }
     });
-
+    console.log(`${request}`)
     if (!request) {
       return res.status(404).json({
         success: false,

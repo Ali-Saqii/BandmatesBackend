@@ -1,4 +1,5 @@
-const { Comment, User } = require("../models")
+const { Comment, User, SavedAlbum } = require("../models");
+const { createCommentNotification } = require("../controllers/notificationController");
 
 const postComment = async (req, res) => {
     try {
@@ -22,6 +23,26 @@ const postComment = async (req, res) => {
         text: text.trim(),
         parent_id: parent_id || null
     });
+
+        const commenter = await User.findByPk(user_id, { attributes: ['username'] });
+
+        const savedByUsers = await SavedAlbum.findAll({
+            where: { album_id },
+            attributes: ['user_Id']
+        });
+
+        const savedByUserIds = savedByUsers
+            .map(s => s.user_Id)
+            .filter(id => id !== user_id); 
+
+        if (savedByUserIds.length > 0) {
+            await createCommentNotification(
+                savedByUserIds,
+                user_id,
+                commenter?.username || 'Someone',
+                album_id  
+            );
+        }
      res.status(201).json({
       success: true,
       message: parent_id ? 'Reply posted successfully' : 'Comment posted successfully'

@@ -1,5 +1,6 @@
 const { Collection, SavedAlbum, Album, Review, Comment, User } = require("../models");
 const { Op } = require('sequelize');
+const { createCollectionUpdateNotification } = require("../controllers/notificationController");
 
 const createCollection = async (req, res) => {
     try {
@@ -24,6 +25,17 @@ const createCollection = async (req, res) => {
         name,
         description
     });
+        try {
+            await createCollectionUpdateNotification(
+                [user_id],
+                name,
+                'New collection created'
+            );
+        } catch (notifErr) {
+            console.error('🔥 Notification error:', notifErr.message);
+        }
+
+
     res.status(201).json({
         success: true,
         message:"Collection created sucessfully",
@@ -75,12 +87,28 @@ if (isEmpty(name) && isEmpty(description)) {
         message: "No changes provided, collection remains same",
     });
 }
-        
+        const oldName = collection.name;
+
         if(name !== undefined) collection.name = name;
         if(description !== undefined) collection.description = description;
 
         await collection.save();
+              try {
+            const updateDetail = [];
+            if (name && name !== oldName) updateDetail.push(`Name changed to "${name}"`);
+            if (description !== undefined) updateDetail.push('Description updated');
 
+            await createCollectionUpdateNotification(
+                [userId],
+                collection.name,
+                updateDetail.join(', ') || 'Collection updated'
+            );
+        } catch (notifErr) {
+            console.error('🔥 Notification error:', notifErr.message);
+        }
+
+
+ 
         return res.status(200).json({
             success: true,
             message: "collection updated sucessfully"

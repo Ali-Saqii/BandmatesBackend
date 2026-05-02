@@ -127,17 +127,17 @@ const createCommentNotification = async (savedByUserIds, commenterId, commenterN
  * Triggered by: when an album in user's saved collection gets an update
  *
  * @param {string[]} savedByUserIds - UUIDs of users who saved the album
- * @param {string}   albumName      - name of the album
+ * @param {string}   collectionName      - name of the album
  * @param {string}   updateDetail   - e.g. "New track added", "Album artwork updated"
  */
-const createCollectionUpdateNotification = async (savedByUserIds, albumName, updateDetail) => {
+const createCollectionUpdateNotification = async (savedByUserIds, collectionName, updateDetail) => {
   if (!savedByUserIds.length) return [];
 
   const records = savedByUserIds.map((user_id) => ({
     user_id,
     type:      "collection_update",
     title:     "Collection Update",
-    body:      `"${albumName}" has been updated: ${updateDetail}.`,
+    body:      `"${collectionName}" ${updateDetail}.`,
     sender_id: null,
   }));
   return Notification.bulkCreate(records);

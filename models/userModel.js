@@ -28,7 +28,11 @@ resetTokenExpiry: {
   type: DataTypes.DATE,
   allowNull: true,
   defaultValue: null,
-}
+},
+notif_system_announcement: { type: DataTypes.BOOLEAN, defaultValue: true },
+notif_bandmate_activity:   { type: DataTypes.BOOLEAN, defaultValue: true },
+notif_comment:             { type: DataTypes.BOOLEAN, defaultValue: true },
+notif_collection_update:   { type: DataTypes.BOOLEAN, defaultValue: true }
   });
 
   module.exports = user;

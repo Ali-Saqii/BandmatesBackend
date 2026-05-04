@@ -109,9 +109,13 @@ const getUserSavedAlbums = async (req, res) => {
       });
     }
 
-    // ─────────────────────────────
+    if (user.savedAlbumsVisibility == false) {
+       return res.status(404).json({
+        success: true,
+        message: "User has hide  its collection"
+    })
+    }  
     // 1. GET SAVED ALBUMS
-    // ─────────────────────────────
     const { rows, count } = await SavedAlbum.findAndCountAll({
       where: { user_id: userId },
       limit,

@@ -1,9 +1,6 @@
 const { Op } = require("sequelize");
 const Notification = require("../models/notificationModel");
-
-// ─────────────────────────────────────────────
-//  HELPERS
-// ─────────────────────────────────────────────
+const User = require("../models/userModel")
 
 const paginate = (query) => {
   const page  = Math.max(1, parseInt(query.page)  || 1);
@@ -11,17 +8,13 @@ const paginate = (query) => {
   return { limit, offset: (page - 1) * limit };
 };
 
-// ─────────────────────────────────────────────
-//  CREATE HELPERS  (call these from other controllers/services)
-// ─────────────────────────────────────────────
 
 /**
- * System Announcement
- * Triggered by: admin action / deployment script
+
  *
- * @param {string[]} userIds  - array of receiver UUIDs (broadcast to all users)
- * @param {string}   title    - e.g. "🚀 New Feature Released!"
- * @param {string}   body     - e.g. "We've added dark mode. Check it out!"
+ * @param {string[]} userIds  
+ * @param {string}   title    
+ * @param {string}   body     
  */
 const createSystemAnnouncement = async (userIds, title, body) => {
   const records = userIds.map((user_id) => ({
@@ -63,12 +56,10 @@ const createBandmateRequestNotification = async (receiverId, senderId, senderNam
 };
 
 /**
- * Bandmate Activity — Request Accepted
- * Triggered by: when receiver approves the request
- *
- * @param {string} receiverId    - original requester (now gets notified)
- * @param {string} acceptorId    - user who accepted
- * @param {string} acceptorName  - display name of acceptor
+ 
+ * @param {string} receiverId    
+ * @param {string} acceptorId    
+ * @param {string} acceptorName  
  */
 const createBandmateAcceptedNotification = async (receiverId, acceptorId, acceptorName) => {
   return Notification.create({
@@ -81,12 +72,11 @@ const createBandmateAcceptedNotification = async (receiverId, acceptorId, accept
 };
 
 /**
- * Bandmate Activity — Request Declined
- * Triggered by: when receiver declines the request
+
  *
- * @param {string} receiverId    - original requester (now gets notified)
- * @param {string} declinerId    - user who declined
- * @param {string} declinerName  - display name of decliner
+ * @param {string} receiverId   
+ * @param {string} declinerId   
+ * @param {string} declinerName  
  */
 const createBandmateDeclinedNotification = async (receiverId, declinerId, declinerName) => {
   return Notification.create({
@@ -99,13 +89,12 @@ const createBandmateDeclinedNotification = async (receiverId, declinerId, declin
 };
 
 /**
- * Comment Notification
- * Triggered by: when a user comments on an album that others have saved
+
  *
- * @param {string[]} savedByUserIds - UUIDs of users who saved the album
- * @param {string}   commenterId    - UUID of the commenter
- * @param {string}   commenterName  - display name of commenter
- * @param {string}   albumName      - name of the album
+ * @param {string[]} savedByUserIds 
+ * @param {string}   commenterId    
+ * @param {string}   commenterName  
+ * @param {string}   albumName      
  */
 const createCommentNotification = async (savedByUserIds, commenterId, commenterName, albumName) => {
   // Don't notify the commenter themselves
@@ -123,12 +112,9 @@ const createCommentNotification = async (savedByUserIds, commenterId, commenterN
 };
 
 /**
- * Collection Update Notification
- * Triggered by: when an album in user's saved collection gets an update
- *
- * @param {string[]} savedByUserIds - UUIDs of users who saved the album
- * @param {string}   collectionName      - name of the album
- * @param {string}   updateDetail   - e.g. "New track added", "Album artwork updated"
+ * @param {string[]} savedByUserIds 
+ * @param {string}   collectionName    
+ * @param {string}   updateDetail   
  */
 const createCollectionUpdateNotification = async (savedByUserIds, collectionName, updateDetail) => {
   if (!savedByUserIds.length) return [];
@@ -143,15 +129,7 @@ const createCollectionUpdateNotification = async (savedByUserIds, collectionName
   return Notification.bulkCreate(records);
 };
 
-// ─────────────────────────────────────────────
-//  READ / MANAGE  (HTTP route handlers)
-// ─────────────────────────────────────────────
 
-/**
- * GET /notifications
- * Returns paginated notifications for the logged-in user.
- * Optional query: ?type=comment&read=false&page=1&limit=20
- */
 const getNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -181,10 +159,7 @@ const getNotifications = async (req, res) => {
   }
 };
 
-/**
- * GET /notifications/unread-count
- * Returns the count of unread notifications for the badge indicator.
- */
+
 const getUnreadCount = async (req, res) => {
   try {
     const count = await Notification.count({
@@ -197,10 +172,7 @@ const getUnreadCount = async (req, res) => {
   }
 };
 
-/**
- * PATCH /notifications/:id/read
- * Marks a single notification as read.
- */
+
 const markAsRead = async (req, res) => {
   try {
     const notification = await Notification.findOne({
@@ -218,10 +190,6 @@ const markAsRead = async (req, res) => {
   }
 };
 
-/**
- * PATCH /notifications/read-all
- * Marks ALL unread notifications of the logged-in user as read.
- */
 const markAllAsRead = async (req, res) => {
   try {
     const [updated] = await Notification.update(
@@ -254,10 +222,6 @@ const deleteNotification = async (req, res) => {
   }
 };
 
-/**
- * DELETE /notifications/clear-all
- * Deletes ALL notifications for the logged-in user.
- */
 const clearAllNotifications = async (req, res) => {
   try {
     const deleted = await Notification.destroy({
@@ -270,17 +234,7 @@ const clearAllNotifications = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────
-//  ADMIN
-// ─────────────────────────────────────────────
 
-/**
- * POST /admin/notifications/announce
- * Admin broadcasts a system announcement to all (or selected) users.
- *
- * Body: { title, body, user_ids? }
- * If user_ids is omitted, fetch all user IDs from your User model and broadcast.
- */
 const broadcastAnnouncement = async (req, res) => {
   try {
     const { title, body, user_ids } = req.body;
@@ -288,10 +242,6 @@ const broadcastAnnouncement = async (req, res) => {
       return res.status(400).json({ success: false, message: "title and body are required." });
     }
 
-    // If no specific user_ids, you'd pull all users here:
-    // const User = require('../models/User');
-    // const users = await User.findAll({ attributes: ['id'] });
-    // const ids = users.map(u => u.id);
     const ids = user_ids || [];
 
     if (!ids.length) {
@@ -309,19 +259,83 @@ const broadcastAnnouncement = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────
-//  EXPORTS
-// ─────────────────────────────────────────────
 
+// GET — notification settings fetch karo
+const getNotificationSettings = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: [
+        'notif_system_announcement',
+        'notif_bandmate_activity',
+        'notif_comment',
+        'notif_collection_update'
+      ]
+    });
+
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        systemAnnouncements: user.notif_system_announcement,
+        bandmateActivity:    user.notif_bandmate_activity,
+        commentsNotification: user.notif_comment,
+        collectionUpdates:   user.notif_collection_update
+      }
+    });
+
+  } catch (error) {
+    console.error('🔥 getNotificationSettings:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// PUT — notification settings update karo
+const updateNotificationSettings = async (req, res) => {
+  try {
+    const {
+      systemAnnouncements,
+      bandmateActivity,
+      commentsNotification,
+      collectionUpdates
+    } = req.body;
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    // Sirf jo bheja gaya hai woh update karo
+    if (typeof systemAnnouncements  === 'boolean') user.notif_system_announcement = systemAnnouncements;
+    if (typeof bandmateActivity      === 'boolean') user.notif_bandmate_activity   = bandmateActivity;
+    if (typeof commentsNotification  === 'boolean') user.notif_comment             = commentsNotification;
+    if (typeof collectionUpdates     === 'boolean') user.notif_collection_update   = collectionUpdates;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Notification settings updated',
+      data: {
+        systemAnnouncements: user.notif_system_announcement,
+        bandmateActivity:    user.notif_bandmate_activity,
+        commentsNotification: user.notif_comment,
+        collectionUpdates:   user.notif_collection_update
+      }
+    });
+
+  } catch (error) {
+    console.error('🔥 updateNotificationSettings:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
 module.exports = {
-  // Service helpers — call these from other controllers
+
   createSystemAnnouncement,
   createBandmateRequestNotification,
   createBandmateAcceptedNotification,
   createBandmateDeclinedNotification,
   createCommentNotification,
   createCollectionUpdateNotification,
-
+  updateNotificationSettings,
   getNotifications,
   getUnreadCount,
   markAsRead,
@@ -329,4 +343,5 @@ module.exports = {
   deleteNotification,
   clearAllNotifications,
   broadcastAnnouncement,
+  getNotificationSettings
 };

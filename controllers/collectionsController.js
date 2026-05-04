@@ -241,7 +241,6 @@ const getUserCollection = async (req, res) => {
                 }
             });
         }
-
         // ✅ 5. Success response
         return res.status(200).json({
             success: true,

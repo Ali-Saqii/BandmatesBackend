@@ -12,7 +12,7 @@ const user =  sequelize.define('User', {
     membership:     { type: DataTypes.ENUM('club','arena','stadium'), defaultValue: 'club' },
     savedAlbumsVisibility: {
     type: DataTypes.BOOLEAN,
-    defaultValue: true
+    defaultValue: false
 },
   subscription_plan:   { type: DataTypes.ENUM('monthly', 'annual'), allowNull: true, defaultValue: null },
   trial_ends_at:       { type: DataTypes.DATE, defaultValue: null },

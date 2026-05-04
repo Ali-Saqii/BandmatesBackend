@@ -8,6 +8,8 @@ const bcrypt = require("bcryptjs")
 
 const getUserProFile = async (req, res) => {
     try{
+          console.log("Controller Hit")
+
         const userId = req.user.id;
         if(!userId){
             return res.status(400).json({
@@ -25,8 +27,10 @@ const getUserProFile = async (req, res) => {
                 "email",
                 "membership",
                 "is_on_trial",
+                "savedAlbumsVisibility"
             ]
         })
+        console.log(`${user.savedAlbumsVisibility}`)
         console.log("🔍 user.avatar:", user.avatar);
         if (!user) {
             return res.status(404).json({
@@ -63,6 +67,7 @@ const getUserProFile = async (req, res) => {
         email:            user.email         ?? "",
         subscriptionPlan: user.membership    ?? "club",
         isOnTrial:        user.is_on_trial   ?? false,
+        savedAlbumsVisibility:        user.savedAlbumsVisibility ?? false
     }
         })
     } catch(error) {
@@ -217,7 +222,6 @@ const updateSavedAlbumsVisibility = async (req, res) => {
   try {
     const userId = req.user.id;
     const { isPrivate } = req.body;
-
     if (typeof isPrivate !== "boolean") {
       return res.status(400).json({
         success: false,
@@ -235,11 +239,10 @@ const updateSavedAlbumsVisibility = async (req, res) => {
 
     user.savedAlbumsVisibility = isPrivate;
     await user.save();
-
     return res.status(200).json({
       success: true,
       message: "Privacy updated successfully",
-      isPrivate: user.isPrivate
+      isPrivate: user.savedAlbumsVisibility
     });
 
   } catch (error) {

@@ -175,6 +175,7 @@ const getUnreadCount = async (req, res) => {
 
 const markAsRead = async (req, res) => {
   try {
+    console.log("ControllerHit")
     const notification = await Notification.findOne({
       where: { id: req.params.id, user_id: req.user.id },
     });
